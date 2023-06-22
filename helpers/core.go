@@ -4,7 +4,8 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
-	"github.com/tranvannghia021/gocore/src"
+	"github.com/tranvannghia021/gocore/src/repositories"
+	"os"
 	"time"
 )
 
@@ -14,9 +15,10 @@ func CheckNilErr(err error) {
 	}
 }
 
-var jwtKey = []byte("ajksdhkajhdkasjbdk")
+var keyJwt, _ = os.LookupEnv("KEY_JWT")
+var jwtKey = []byte(keyJwt)
 
-func EncodeJWT(payload src.PayloadGenerate) string {
+func EncodeJWT(payload repositories.PayloadGenerate) string {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	payload.CreateAt = time.Now().Add(10 * time.Minute)
@@ -36,9 +38,9 @@ func IsExpire(timeState time.Time) bool {
 	return timeState.Before(time.Now())
 }
 
-func DecodeJWT(tokenString string) (src.PayloadGenerate, bool) {
+func DecodeJWT(tokenString string) (repositories.PayloadGenerate, bool) {
 	token, err := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
-		return []byte("ajksdhkajhdkasjbdk"), nil
+		return []byte(keyJwt), nil
 	})
 	claims, ok := token.Claims.(*jwt.MapClaims)
 	if ok && token.Valid {
@@ -48,7 +50,7 @@ func DecodeJWT(tokenString string) (src.PayloadGenerate, bool) {
 	}
 	jsonString, _ := json.Marshal(claims)
 	fmt.Println(string(jsonString))
-	var payload src.PayloadGenerate
+	var payload repositories.PayloadGenerate
 	_ = json.Unmarshal(jsonString, &payload)
 
 	return payload, IsExpire(payload.CreateAt)

@@ -1,17 +1,21 @@
 package gocore
 
-import "github.com/tranvannghia021/gocore/src"
+import (
+	"github.com/tranvannghia021/gocore/helpers"
+	"github.com/tranvannghia021/gocore/src/repositories"
+	"gorm.io/gorm"
+)
 
 func MigrateCore(db *gorm.DB) {
-	er := db.Migrator().CreateTable(&src.Core{})
+	er := db.Migrator().CreateTable(&repositories.Core{})
 	helpers.CheckNilErr(er)
 }
 
 func RollbackMigrate(db *gorm.DB) {
-	er := db.Migrator().DropTable(&src.Core{})
+	er := db.Migrator().DropTable(&repositories.Core{})
 	helpers.CheckNilErr(er)
 }
 
-func CheckTable(table src.Core, db *gorm.DB) bool {
+func CheckTable(table repositories.Core, db *gorm.DB) bool {
 	return db.Migrator().HasTable(&table)
 }

@@ -4,8 +4,10 @@ import (
 	"fmt"
 	"github.com/go-redis/redis"
 	"github.com/tranvannghia021/gocore"
-	"github.com/tranvannghia021/gocore/src"
+	"github.com/tranvannghia021/gocore/helpers"
+	"github.com/tranvannghia021/gocore/src/repositories"
 	"gorm.io/driver/postgres"
+	"gorm.io/gorm"
 	"os"
 	"strconv"
 )
@@ -23,7 +25,7 @@ func ConnectDB() {
 	helpers.CheckNilErr(err)
 	Connection = connect
 	fmt.Println("------------postgres CORE ready")
-	if !gocore.CheckTable(src.Core{}, connect) {
+	if !gocore.CheckTable(repositories.Core{}, connect) {
 		gocore.MigrateCore(connect)
 	}
 

@@ -1,37 +1,38 @@
 package src
 
 import (
+	"crypto/rand"
 	"crypto/sha256"
 	"encoding/base64"
 	"fmt"
-	core "github.com/tranvannghia021/gocore"
+	"github.com/tranvannghia021/gocore"
 	"github.com/tranvannghia021/gocore/helpers"
-	"github.com/tranvannghia021/gocore/src"
+	"github.com/tranvannghia021/gocore/src/repositories"
 	"net/url"
 	"os"
 	"strconv"
 	"strings"
 )
 
-var payload = src.PayloadGenerate{}
+var payload = repositories.PayloadGenerate{}
 var codeVerifier string
 var urlAuth string
 
-var coreConfig src.ConfigSocial
+var coreConfig repositories.ConfigSocial
 
 func New(platform string) string {
-	initConfig := func() string {
+	initConfig := func(coreConfig *repositories.ConfigSocial) string {
 		return "new" + strings.Title(platform)
 	}
 	platform = strings.ToUpper(platform)
-	core.AppId, _ = os.LookupEnv(fmt.Sprintf("%s_APP_ID", platform))
-	core.ClientId, _ = os.LookupEnv(fmt.Sprintf("%s_CLIENT_ID", platform))
-	core.RedirectUri, _ = os.LookupEnv(fmt.Sprintf("%s_REDIRECT_URI", platform))
-	core.ClientSecret, _ = os.LookupEnv(fmt.Sprintf("%s_CLIENT_SECRET", platform))
-	core.EndPoint, _ = os.LookupEnv(fmt.Sprintf("%s_BASE_API", platform))
-	core.Version, _ = os.LookupEnv(fmt.Sprintf("%s_VERSION", platform))
+	gocore.AppId, _ = os.LookupEnv(fmt.Sprintf("%s_APP_ID", platform))
+	gocore.ClientId, _ = os.LookupEnv(fmt.Sprintf("%s_CLIENT_ID", platform))
+	gocore.RedirectUri, _ = os.LookupEnv(fmt.Sprintf("%s_REDIRECT_URI", platform))
+	gocore.ClientSecret, _ = os.LookupEnv(fmt.Sprintf("%s_CLIENT_SECRET", platform))
+	gocore.EndPoint, _ = os.LookupEnv(fmt.Sprintf("%s_BASE_API", platform))
+	gocore.Version, _ = os.LookupEnv(fmt.Sprintf("%s_VERSION", platform))
 	codeVerifier = getCodeVerifier()
-	initConfig()
+	initConfig(&coreConfig)
 	return generate()
 }
 
@@ -43,8 +44,8 @@ func generate() string {
 }
 func buildLinkAuth(state string) string {
 	queryData := url.Values{}
-	queryData.Add("client_id", core.ClientId)
-	queryData.Add("redirect_uri", core.RedirectUri)
+	queryData.Add("client_id", gocore.ClientId)
+	queryData.Add("redirect_uri", gocore.RedirectUri)
 	queryData.Add("scope", formatScope())
 	queryData.Add("response_type", "code")
 	queryData.Add("state", state)
