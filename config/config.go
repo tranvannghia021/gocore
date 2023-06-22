@@ -3,7 +3,6 @@ package config
 import (
 	"fmt"
 	"github.com/go-redis/redis"
-	"github.com/tranvannghia021/gocore"
 	"github.com/tranvannghia021/gocore/helpers"
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"gorm.io/driver/postgres"
@@ -25,8 +24,8 @@ func ConnectDB() {
 	helpers.CheckNilErr(err)
 	Connection = connect
 	fmt.Println("------------postgres CORE ready")
-	if !gocore.CheckTable(repositories.Core{}, connect) {
-		gocore.MigrateCore(connect)
+	if !CheckTable(repositories.Core{}, connect) {
+		MigrateCore(connect)
 	}
 
 }
@@ -53,4 +52,18 @@ type ConfigCore struct {
 		TableName string            `json:"table_name"`
 		Fields    map[string]string `json:"fields"`
 	} `json:"database"`
+}
+
+func MigrateCore(db *gorm.DB) {
+	er := db.Migrator().CreateTable(&repositories.Core{})
+	helpers.CheckNilErr(er)
+}
+
+func RollbackMigrate(db *gorm.DB) {
+	er := db.Migrator().DropTable(&repositories.Core{})
+	helpers.CheckNilErr(er)
+}
+
+func CheckTable(table repositories.Core, db *gorm.DB) bool {
+	return db.Migrator().HasTable(&table)
 }
