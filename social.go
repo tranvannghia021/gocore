@@ -7,6 +7,7 @@ import (
 	"github.com/tranvannghia021/gocore/config"
 	"github.com/tranvannghia021/gocore/src"
 	"github.com/tranvannghia021/gocore/src/response"
+	"github.com/tranvannghia021/gocore/src/socials"
 	"net/http"
 	"os"
 )
@@ -15,6 +16,7 @@ func init() {
 	godotenv.Load()
 	config.ConnectDB()
 	config.ConnectCache()
+	LoadCoreConfig()
 }
 
 type StyleRpPusher struct {
@@ -55,4 +57,24 @@ func Migrate(w http.ResponseWriter, r *http.Request) {
 func Rollback(w http.ResponseWriter, r *http.Request) {
 	config.RollbackMigrate(config.Connection)
 	json.NewEncoder(w).Encode("Ok")
+}
+
+func LoadCoreConfig() {
+	socials.AddScopeFaceBook([]string{
+		"public_profile",
+		"email",
+	})
+
+	socials.AddFieldFacebook([]string{
+		"id",
+		"name",
+		"first_name",
+		"last_name",
+		"email",
+		"birthday",
+		"gender",
+		"hometown",
+		"location",
+		"picture",
+	})
 }
