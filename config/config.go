@@ -23,10 +23,10 @@ func ConnectDB() {
 	connect, err := gorm.Open(postgres.Open(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", host, user, pass, db, port)))
 	helpers.CheckNilErr(err)
 	Connection = connect
-	fmt.Println("------------postgres CORE ready")
 	if !CheckTable(repositories.Core{}, connect) {
 		MigrateCore(connect)
 	}
+	fmt.Println("------------postgres CORE ready")
 
 }
 

@@ -17,13 +17,14 @@ type ConfigSocial struct {
 	UsePKCE     bool
 	Scopes      []string
 	Paramerters map[string]string
+	Fields      []string
 }
 
 type PayloadGenerate struct {
-	Ip           string    `json:"ip,omitempty"`
-	Platform     string    `json:"platform,omitempty"`
-	CodeVerifier string    `json:"code_verifier,omitempty"`
-	ID           int       `json:"id ,omitempty"`
-	Email        string    `json:"email,omitempty"`
-	CreateAt     time.Time `json:"create_at,omitempty"`
+	Ip           string
+	Platform     string
+	CodeVerifier string
+	ID           int
+	Email        string
+	CreateAt     time.Time
 }

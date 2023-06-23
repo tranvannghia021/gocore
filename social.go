@@ -6,16 +6,9 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/tranvannghia021/gocore/config"
 	"github.com/tranvannghia021/gocore/src"
+	"github.com/tranvannghia021/gocore/src/response"
 	"net/http"
-)
-
-var (
-	AppId        string
-	ClientId     string
-	ClientSecret string
-	EndPoint     string
-	Version      string
-	RedirectUri  string
+	"os"
 )
 
 func init() {
@@ -24,9 +17,42 @@ func init() {
 	config.ConnectCache()
 }
 
+type StyleRpPusher struct {
+	Url    string `json:"url"`
+	Pusher struct {
+		Channel string `json:"channel"`
+		Event   string `json:"event"`
+	} `json:"pusher"`
+}
+
 func GenerateUrl(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "application/json")
 	platform := mux.Vars(r)["platform"]
-	url := src.Social(platform)
-	json.NewEncoder(w).Encode(url)
+	config.Payload.Ip = r.RemoteAddr
+	config.Payload.Platform = platform
+	url := src.GenerateUrl(platform)
+	channel, _ := os.LookupEnv("CHANNEL_NAME")
+	event, _ := os.LookupEnv("EVENT_NAME")
+	response.Response(&StyleRpPusher{
+		Url: url,
+		Pusher: struct {
+			Channel string `json:"channel"`
+			Event   string `json:"event"`
+		}{
+			Channel: channel,
+			Event:   event + "_" + config.Payload.Ip,
+		},
+	}, w, false, nil)
+}
+
+func Auth(w http.ResponseWriter, r *http.Request) {
+	src.AuthHandle(r)
+}
+
+func Migrate(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func Rollback(w http.ResponseWriter, r *http.Request) {
+	config.RollbackMigrate(config.Connection)
+	json.NewEncoder(w).Encode("Ok")
 }
