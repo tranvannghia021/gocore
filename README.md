@@ -113,4 +113,4 @@ func apiRouter(router *mux.Router) {
 | Method  | URI |  Action | Middleware |
 |---------| --- | --- | --- |
 | POST    | api/{platform}/generate-url |  gocore.GenerateUrl |   |
-| GET     | api/handle/auth |  gocore.Auth |  sohead.auth |middlewaresCore.VerifyState
+| GET     | api/handle/auth |  gocore.Auth | middlewaresCore.VerifyState
