@@ -5,7 +5,6 @@ import (
 	"crypto/sha256"
 	"encoding/base64"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/tranvannghia021/gocore/config"
@@ -20,6 +19,11 @@ import (
 	"strings"
 	"time"
 )
+
+type Social interface {
+	Generate() string
+	Auth(code string, r *http.Request)
+}
 
 var codeVerifier string
 var urlAuth string
@@ -45,6 +49,7 @@ type ResProfile struct {
 
 type SocialBase struct {
 	Platform string
+	Builder  *sql.SCore
 }
 
 func New(platform string) *SocialBase {
@@ -65,6 +70,7 @@ func New(platform string) *SocialBase {
 	codeVerifier = getCodeVerifier()
 	return &SocialBase{
 		Platform: strings.ToLower(platform),
+		Builder:  &sql.SCore{},
 	}
 }
 
@@ -78,7 +84,7 @@ func (s *SocialBase) Auth(code string, r *http.Request) {
 	getToken, _ := vars.PLatFormToken[s.Platform]
 	token := getToken(code)
 	if !token.Status {
-		helpers.CheckNilErr(errors.New("Authentication failed"))
+		helpers.CheckNilErr(token.Error)
 		return
 	}
 	var parseToken ResToken
@@ -89,7 +95,7 @@ func (s *SocialBase) Auth(code string, r *http.Request) {
 	coreModel.RefreshToken = parseToken.RefreshToken
 	coreModel.ExpireToken = time.Now().Add(time.Duration(parseToken.ExpiresIn) * time.Millisecond)
 	coreModel.ID = uuid.New()
-	result := sql.Insert(&coreModel)
+	result := s.Builder.UpdateOrCreate(&coreModel)
 	if !result.Status {
 		helpers.CheckNilErr(result.Errors)
 		return

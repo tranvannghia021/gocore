@@ -15,7 +15,11 @@ import (
 
 func CheckNilErr(err error) {
 	if err != nil {
+		//var w io.Writer
 		panic(err)
+		//var w http.ResponseWriter
+		//fmt.Fprintf(w, "Invalid request body error:%sâ€", err.Error())
+		//json.NewEncoder(w).Encode("adsaas")
 	}
 }
 
