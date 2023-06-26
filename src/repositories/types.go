@@ -1,7 +1,5 @@
 package repositories
 
-import "time"
-
 type StructureAuth struct {
 	ClientId            string `json:"client_id"`
 	RedirectUri         string `json:"redirect_uri"`
@@ -18,13 +16,4 @@ type ConfigSocial struct {
 	Scopes      []string
 	Paramerters map[string]string
 	Fields      []string
-}
-
-type PayloadGenerate struct {
-	Ip           string
-	Platform     string
-	CodeVerifier string
-	ID           int
-	Email        string
-	CreateAt     time.Time
 }

@@ -15,7 +15,7 @@ func VerifyState(next http.Handler) http.Handler {
 		if state == "" {
 			errors = append(errors, "Authentication failed!")
 		} else {
-			data, expire := helpers.DecodeJWT(state)
+			data, expire := helpers.DecodeJWT(state, false)
 			if expire {
 				errors = append(errors, "Signature is invalid!")
 			}

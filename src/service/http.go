@@ -1,20 +1,20 @@
 package service
 
 import (
-	"github.com/tranvannghia021/gocore/config"
+	"github.com/tranvannghia021/gocore/vars"
 	"io"
 	"io/ioutil"
 	"net/http"
 )
 
-func HandleErrorReg(err error) config.ResReq {
-	return config.ResReq{
+func HandleErrorReg(err error) vars.ResReq {
+	return vars.ResReq{
 		Status: false,
 		Data:   nil,
 		Error:  err,
 	}
 }
-func GetRequest(url string, headers map[string]string) config.ResReq {
+func GetRequest(url string, headers map[string]string) vars.ResReq {
 	req, err := http.NewRequest("GET", url, nil)
 	for k, v := range headers {
 		req.Header.Add(k, v)
@@ -26,14 +26,14 @@ func GetRequest(url string, headers map[string]string) config.ResReq {
 	body, err := ioutil.ReadAll(res.Body)
 
 	HandleErrorReg(err)
-	return config.ResReq{
+	return vars.ResReq{
 		Status: true,
 		Data:   body,
 		Error:  nil,
 	}
 }
 
-func PostRequest(url string, headers map[string]string, body io.Reader) config.ResReq {
+func PostRequest(url string, headers map[string]string, body io.Reader) vars.ResReq {
 	req, err := http.NewRequest("POST", url, body)
 	for k, v := range headers {
 		req.Header.Add(k, v)
@@ -44,14 +44,14 @@ func PostRequest(url string, headers map[string]string, body io.Reader) config.R
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
 	HandleErrorReg(err)
-	return config.ResReq{
+	return vars.ResReq{
 		Status: true,
 		Data:   data,
 		Error:  nil,
 	}
 }
 
-func PostFormDataRequest(url string, headers map[string]string, body io.Reader) config.ResReq {
+func PostFormDataRequest(url string, headers map[string]string, body io.Reader) vars.ResReq {
 	req, err := http.NewRequest("POST", url, body)
 	for k, v := range headers {
 		req.Header.Add(k, v)
@@ -63,14 +63,14 @@ func PostFormDataRequest(url string, headers map[string]string, body io.Reader) 
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
 	HandleErrorReg(err)
-	return config.ResReq{
+	return vars.ResReq{
 		Status: true,
 		Data:   data,
 		Error:  nil,
 	}
 }
 
-func PutRequest(url string, headers map[string]string, body io.Reader) config.ResReq {
+func PutRequest(url string, headers map[string]string, body io.Reader) vars.ResReq {
 	req, err := http.NewRequest("PUT", url, body)
 	for k, v := range headers {
 		req.Header.Add(k, v)
@@ -81,14 +81,14 @@ func PutRequest(url string, headers map[string]string, body io.Reader) config.Re
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
 	HandleErrorReg(err)
-	return config.ResReq{
+	return vars.ResReq{
 		Status: true,
 		Data:   data,
 		Error:  nil,
 	}
 }
 
-func DeleteRequest(url string, headers map[string]string, body io.Reader) config.ResReq {
+func DeleteRequest(url string, headers map[string]string, body io.Reader) vars.ResReq {
 	req, err := http.NewRequest("DELETE", url, body)
 	for k, v := range headers {
 		req.Header.Add(k, v)
@@ -99,7 +99,7 @@ func DeleteRequest(url string, headers map[string]string, body io.Reader) config
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
 	HandleErrorReg(err)
-	return config.ResReq{
+	return vars.ResReq{
 		Status: true,
 		Data:   data,
 		Error:  nil,

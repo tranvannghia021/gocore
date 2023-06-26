@@ -1,2 +1,3 @@
-git commit -am "code..."
+input=$1
+git commit -am $input
 git push

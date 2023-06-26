@@ -32,7 +32,7 @@
 - gorm.io/gorm >= v1.25
 ## Install
 ```bash
-go get https://github.com/tranvannghia021/gocore
+go get -u github.com/tranvannghia021/gocore
 ```
 ## Setup
 -    If You want custom scope or field for platform.Ex:

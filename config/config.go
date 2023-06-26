@@ -3,16 +3,14 @@ package config
 import (
 	"fmt"
 	"github.com/go-redis/redis"
+	"github.com/joho/godotenv"
 	"github.com/tranvannghia021/gocore/helpers"
-	"github.com/tranvannghia021/gocore/src/repositories"
+	"github.com/tranvannghia021/gocore/vars"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"os"
 	"strconv"
 )
-
-var Connection *gorm.DB
-var Redis *redis.Client
 
 func ConnectDB() {
 	host, _ := os.LookupEnv("DB_CORE_HOST")
@@ -22,9 +20,9 @@ func ConnectDB() {
 	db, _ := os.LookupEnv("DB_CORE_NAME")
 	connect, err := gorm.Open(postgres.Open(fmt.Sprintf("host=%s user=%s password=%s dbname=%s port=%s sslmode=disable", host, user, pass, db, port)))
 	helpers.CheckNilErr(err)
-	Connection = connect
-	if !CheckTable(repositories.Core{}, connect) {
-		MigrateCore(connect)
+	vars.Connection = connect
+	if !helpers.CheckTable(connect) {
+		helpers.MigrateCore(connect)
 	}
 	fmt.Println("------------postgres CORE ready")
 
@@ -43,27 +41,11 @@ func ConnectCache() {
 	})
 	pong, err := client.Ping().Result()
 	helpers.CheckNilErr(err)
-	Redis = client
+	vars.Redis = client
 	fmt.Println("-----------------redis CORE ready " + pong)
 }
-
-type ConfigCore struct {
-	Database struct {
-		TableName string            `json:"table_name"`
-		Fields    map[string]string `json:"fields"`
-	} `json:"database"`
-}
-
-func MigrateCore(db *gorm.DB) {
-	er := db.Migrator().CreateTable(&repositories.Core{})
-	helpers.CheckNilErr(er)
-}
-
-func RollbackMigrate(db *gorm.DB) {
-	er := db.Migrator().DropTable(&repositories.Core{})
-	helpers.CheckNilErr(er)
-}
-
-func CheckTable(table repositories.Core, db *gorm.DB) bool {
-	return db.Migrator().HasTable(&table)
+func init() {
+	godotenv.Load()
+	ConnectDB()
+	ConnectCache()
 }

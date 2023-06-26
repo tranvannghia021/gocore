@@ -3,33 +3,54 @@ package socials
 import (
 	"encoding/json"
 	"fmt"
-	"github.com/tranvannghia021/gocore/config"
 	"github.com/tranvannghia021/gocore/helpers"
-	"github.com/tranvannghia021/gocore/service"
 	"github.com/tranvannghia021/gocore/src/repositories"
+	"github.com/tranvannghia021/gocore/src/service"
+	"github.com/tranvannghia021/gocore/vars"
 	"net/url"
 	"strings"
 	"time"
 )
 
 var facebook string = "facebook"
+var defaultScopeFb = []string{
+	"public_profile",
+	"email"}
+var scopeFb []string
+var defaultFieldsFb = []string{
+	"id",
+	"name",
+	"first_name",
+	"last_name",
+	"email",
+	"birthday",
+	"gender",
+	"hometown",
+	"location",
+	"picture",
+}
+var fieldFb []string
 
 func init() {
-	config.CallConfig[facebook] = loadConfigFb
-	config.PLatFormToken[facebook] = getTokenFb
-	config.PLatFormProfile[facebook] = profileFb
+	AddScopeFaceBook(scopeFb)
+	AddFieldFacebook(fieldFb)
+	vars.CallConfig[facebook] = loadConfigFb
+	vars.PLatFormToken[facebook] = getTokenFb
+	vars.PLatFormProfile[facebook] = profileFb
 }
 
 func AddScopeFaceBook(scope []string) {
-	coreConfig.Scopes = scope
+	scopeFb = scope
+	coreConfig.Scopes = helpers.RemoveDuplicateStr(append(defaultScopeFb, scope...))
 }
 
 func AddFieldFacebook(fields []string) {
-	coreConfig.Fields = fields
+	fieldFb = fields
+	coreConfig.Fields = helpers.RemoveDuplicateStr(append(defaultFieldsFb, fields...))
 }
 
-var getTokenFb = func(code string) config.ResReq {
-	url := fmt.Sprintf("%s/%s/oauth/access_token?%s", config.EndPoint, config.Version, buildPayloadToken(code))
+var getTokenFb = func(code string) vars.ResReq {
+	url := fmt.Sprintf("%s/%s/oauth/access_token?%s", vars.EndPoint, vars.Version, buildPayloadToken(code))
 	return service.GetRequest(url, make(map[string]string))
 }
 
@@ -37,8 +58,8 @@ var profileFb = func(token string) repositories.Core {
 	query := url.Values{}
 	query.Add("access_token", token)
 	results := service.GetRequest(fmt.Sprintf("%s/%s/me?%s&fields=%s",
-		config.EndPoint,
-		config.Version, query.Encode(), strings.Join(coreConfig.Fields, ",")), nil)
+		vars.EndPoint,
+		vars.Version, query.Encode(), strings.Join(coreConfig.Fields, ",")), nil)
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
 	}
@@ -60,7 +81,7 @@ var profileFb = func(token string) repositories.Core {
 var loadConfigFb = func() {
 	coreConfig.UsePKCE = false
 	coreConfig.Separator = ","
-	urlAuth = fmt.Sprintf("https://www.facebook.com/%s/dialog/oauth", config.Version)
+	urlAuth = fmt.Sprintf("https://www.facebook.com/%s/dialog/oauth", vars.Version)
 	parameters["display"] = "popup"
 }
 

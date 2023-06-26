@@ -1,9 +1,12 @@
-package config
+package sql
 
 import (
 	"github.com/tranvannghia021/gocore/src/repositories"
+	"github.com/tranvannghia021/gocore/vars"
 	"gorm.io/gorm/clause"
 )
+
+var connect = vars.Connection
 
 type ResSql struct {
 	Status bool        `json:"status,omitempty"`
@@ -12,7 +15,7 @@ type ResSql struct {
 }
 
 func Insert(coreModel *repositories.Core) *ResSql {
-	result := Connection.Clauses(clause.OnConflict{
+	result := connect.Clauses(clause.OnConflict{
 		Columns: []clause.Column{{
 			Name: "internal_id",
 		}},
@@ -33,11 +36,11 @@ func Insert(coreModel *repositories.Core) *ResSql {
 }
 
 func Update(coreModel repositories.Core) {
-	Connection.Model(&coreModel).Where("id", coreModel.ID).Save(&coreModel)
+	connect.Model(&coreModel).Where("id", coreModel.ID).Save(&coreModel)
 }
 
 func getAll(coreModel repositories.Core) ResSql {
-	results := Connection.Find(&coreModel)
+	results := connect.Find(&coreModel)
 	if results.Error != nil {
 		return ResSql{
 			Status: false,
@@ -52,7 +55,7 @@ func getAll(coreModel repositories.Core) ResSql {
 }
 
 func First(coreModel repositories.Core) ResSql {
-	result := Connection.First(&coreModel)
+	result := connect.First(&coreModel)
 	if result.Error != nil {
 		return ResSql{
 			Status: false,
@@ -68,7 +71,7 @@ func First(coreModel repositories.Core) ResSql {
 }
 
 func DeleteById(coreModel repositories.Core) ResSql {
-	result := Connection.Delete(&coreModel)
+	result := connect.Delete(&coreModel)
 	if result.Error != nil {
 		return ResSql{
 			Status: false,
