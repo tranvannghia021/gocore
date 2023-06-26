@@ -7,16 +7,15 @@ import (
 )
 
 type IBaseSql interface {
-	GetALL(models []interface{}) ResSql
-	Create(model interface{}) ResSql
-	Update(model interface{}) ResSql
-	Delete(model interface{}) ResSql
-	First(model interface{}) ResSql
-	Last(model interface{}) ResSql
-	UpdateOrCreate(model *interface{}, fieldUniq string) ResSql
+	GetALL() ResSql
+	Create() ResSql
+	Update() ResSql
+	Delete() ResSql
+	First() ResSql
+	Last() ResSql
 }
 type IBaseSubConfig interface {
-	SetModel(model interface{})
+	SetModel(model interface{}) *SBaseSql
 	GetModel() interface{}
 }
 
