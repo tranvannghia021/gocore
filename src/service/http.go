@@ -1,10 +1,13 @@
 package service
 
 import (
+	"encoding/json"
 	"github.com/tranvannghia021/gocore/vars"
 	"io"
 	"io/ioutil"
 	"net/http"
+	"net/url"
+	"strings"
 )
 
 func HandleErrorReg(err error) vars.ResReq {
@@ -33,8 +36,10 @@ func GetRequest(url string, headers map[string]string) vars.ResReq {
 	}
 }
 
-func PostRequest(url string, headers map[string]string, body io.Reader) vars.ResReq {
-	req, err := http.NewRequest("POST", url, body)
+func PostRequest(url string, headers map[string]string, body map[string]interface{}) vars.ResReq {
+	byte, _ := json.Marshal(body)
+	result := strings.NewReader(string(byte))
+	req, err := http.NewRequest("POST", url, result)
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}
@@ -51,8 +56,8 @@ func PostRequest(url string, headers map[string]string, body io.Reader) vars.Res
 	}
 }
 
-func PostFormDataRequest(url string, headers map[string]string, body io.Reader) vars.ResReq {
-	req, err := http.NewRequest("POST", url, body)
+func PostFormDataRequest(url string, headers map[string]string, body url.Values) vars.ResReq {
+	req, err := http.NewRequest("POST", url, strings.NewReader(body.Encode()))
 	for k, v := range headers {
 		req.Header.Add(k, v)
 	}

@@ -2,7 +2,6 @@ package vars
 
 import (
 	"github.com/go-redis/redis"
-	"github.com/tranvannghia021/gocore/src/repositories"
 	"gorm.io/gorm"
 	"time"
 )
@@ -17,9 +16,6 @@ var (
 	RedirectUri  string
 	Tenant       string
 )
-var CallConfig = make(map[string]func())
-var PLatFormToken = make(map[string]func(code string) ResReq)
-var PLatFormProfile = make(map[string]func(code string) repositories.Core)
 
 var Connection *gorm.DB
 var Redis *redis.Client
@@ -42,4 +38,5 @@ type PayloadGenerate struct {
 	ID           int
 	Email        string
 	CreateAt     time.Time
+	Domain       string
 }

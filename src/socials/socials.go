@@ -1,10 +1,9 @@
 package socials
 
 import (
-	"crypto/rand"
 	"crypto/sha256"
-	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/google/uuid"
 	"github.com/tranvannghia021/gocore/config"
@@ -12,17 +11,26 @@ import (
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/repositories/sql"
 	"github.com/tranvannghia021/gocore/vars"
+	"log"
 	"net/http"
 	"net/url"
 	"os"
-	"strconv"
 	"strings"
 	"time"
 )
 
-type Social interface {
+type social interface {
 	Generate() string
-	Auth(code string, r *http.Request)
+	Auth(r *http.Request)
+	buildLinkAuth(state string) string
+	getUrlAuth() string
+	formatScope() string
+	getCodeChallenge() string
+}
+type iCore interface {
+	loadConfig()
+	getToken(code string) vars.ResReq
+	profile(token string) repositories.Core
 }
 
 var codeVerifier string
@@ -30,67 +38,116 @@ var urlAuth string
 var parameters = make(map[string]string)
 var coreConfig repositories.ConfigSocial
 
-type ResToken struct {
-	AccessToken  string `json:"access_token,omitempty"`
-	TokenType    string `json:"token_type,omitempty"`
-	ExpiresIn    uint64 `json:"expires_in,omitempty"`
-	RefreshToken string `json:"refresh_token,omitempty"`
+type resToken struct {
+	AccessToken          string `json:"access_token,omitempty"`
+	TokenType            string `json:"token_type,omitempty"`
+	ExpiresIn            uint64 `json:"expires_in,omitempty"`
+	RefreshToken         string `json:"refresh_token,omitempty"`
+	Scope                string `json:"scope,omitempty"`
+	IdToken              string `json:"id_token,omitempty"`
+	RefreshTokenExpireIn uint64 `json:"refresh_token_expire_in,omitempty"`
 }
 
-type ResProfile struct {
-	Id       string
-	Name     string
-	FistName string
-	LastName string
-	Email    string
-	Picture  struct {
-	}
-}
-
-type SocialBase struct {
+type socialBase struct {
 	Platform string
 	Builder  *sql.SCore
+	ICore    iCore
 }
 
-func New(platform string) *SocialBase {
-	handler, ok := vars.CallConfig[platform]
-	if !ok {
-		panic("platform not found")
-	}
-	platform = strings.ToUpper(platform)
-	vars.AppId, _ = os.LookupEnv(fmt.Sprintf("%s_APP_ID", platform))
-	vars.ClientId, _ = os.LookupEnv(fmt.Sprintf("%s_CLIENT_ID", platform))
+func load(platform string) iCore {
+	key := strings.ToUpper(platform)
+	vars.AppId, _ = os.LookupEnv(fmt.Sprintf("%s_APP_ID", key))
+	vars.ClientId, _ = os.LookupEnv(fmt.Sprintf("%s_CLIENT_ID", key))
 	appUrl, _ := os.LookupEnv("APP_URL")
 	vars.RedirectUri = appUrl + "/api/handle/auth"
-	vars.ClientSecret, _ = os.LookupEnv(fmt.Sprintf("%s_CLIENT_SECRET", platform))
-	vars.Tenant, _ = os.LookupEnv(fmt.Sprintf("%s_TENANT", platform))
-	vars.EndPoint, _ = os.LookupEnv(fmt.Sprintf("%s_BASE_API", platform))
-	vars.Version, _ = os.LookupEnv(fmt.Sprintf("%s_VERSION", platform))
-	handler()
+	vars.ClientSecret, _ = os.LookupEnv(fmt.Sprintf("%s_CLIENT_SECRET", key))
+	vars.Tenant, _ = os.LookupEnv(fmt.Sprintf("%s_TENANT", key))
+	vars.EndPoint, _ = os.LookupEnv(fmt.Sprintf("%s_BASE_API", key))
+	vars.Version, _ = os.LookupEnv(fmt.Sprintf("%s_VERSION", key))
+	var typeStruct iCore
+	switch platform {
+	case google:
+		typeStruct = sGoogle{}
+		break
+	case facebook:
+		typeStruct = sFacebook{}
+		break
+	case instagram:
+		typeStruct = sInstagram{}
+		break
+	case github:
+		typeStruct = sGithub{}
+		break
+	case twitter:
+		typeStruct = sTwitter{}
+		break
+	case bitbucket:
+		typeStruct = sBitbucket{}
+		break
+	case dropbox:
+		typeStruct = sDropbox{}
+		break
+	case gitlab:
+		typeStruct = sGitlab{}
+		break
+	case line:
+		typeStruct = sLine{}
+		break
+	case linkedin:
+		typeStruct = sLinkedin{}
+		break
+	case microsoft:
+		typeStruct = sMicrosoft{}
+		break
+	case pinterest:
+		typeStruct = sPinterest{}
+		break
+	case reddit:
+		typeStruct = sReddit{}
+		break
+	case shopify:
+		typeStruct = sShopify{}
+		break
+
+	default:
+		helpers.CheckNilErr(errors.New("Platform not found"))
+	}
+	return typeStruct
+}
+
+func New() social {
+	platform := vars.Payload.Platform
+	social := load(platform)
+	social.loadConfig()
 	codeVerifier = getCodeVerifier()
-	return &SocialBase{
+	return &socialBase{
 		Platform: strings.ToLower(platform),
 		Builder:  &sql.SCore{},
+		ICore:    social,
 	}
 }
 
-func (s *SocialBase) Generate() string {
+func (s *socialBase) Generate() string {
 	if coreConfig.UsePKCE {
 		vars.Payload.CodeVerifier = codeVerifier
 	}
-	return buildLinkAuth(helpers.EncodeJWT(vars.Payload, false))
+	return s.buildLinkAuth(helpers.EncodeJWT(vars.Payload, false))
 }
-func (s *SocialBase) Auth(code string, r *http.Request) {
-	getToken, _ := vars.PLatFormToken[s.Platform]
-	token := getToken(code)
+func (s *socialBase) Auth(r *http.Request) {
+	code := r.URL.Query().Get("code")
+	if coreConfig.UsePKCE {
+		code = code + "," + r.Header.Get("code_verifier")
+	}
+	token := s.ICore.getToken(code)
 	if !token.Status {
 		helpers.CheckNilErr(token.Error)
 		return
 	}
-	var parseToken ResToken
+	log.Println(string(token.Data))
+	var parseToken resToken
 	_ = json.Unmarshal(token.Data, &parseToken)
-	getProfile, _ := vars.PLatFormProfile[s.Platform]
-	coreModel := getProfile(parseToken.AccessToken)
+	idToken = parseToken.IdToken
+	coreModel := s.ICore.profile(parseToken.AccessToken)
 	coreModel.AccessToken = parseToken.AccessToken
 	coreModel.RefreshToken = parseToken.RefreshToken
 	coreModel.ExpireToken = time.Now().Add(time.Duration(parseToken.ExpiresIn) * time.Millisecond)
@@ -104,78 +161,70 @@ func (s *SocialBase) Auth(code string, r *http.Request) {
 	b, _ := json.Marshal(coreModel)
 	config.Pusher(string(b), r.Header.Get("ip"))
 }
-func buildLinkAuth(state string) string {
+func (s *socialBase) buildLinkAuth(state string) string {
 	queryData := url.Values{}
 	queryData.Add("client_id", vars.ClientId)
 	queryData.Add("redirect_uri", vars.RedirectUri)
-	queryData.Add("scope", formatScope())
+	queryData.Add("scope", s.formatScope())
 	queryData.Add("response_type", "code")
 	queryData.Add("state", state)
 	if coreConfig.UsePKCE {
-		queryData.Add("code_challenge", getCodeChallenge())
+		queryData.Add("code_challenge", s.getCodeChallenge())
 		queryData.Add("code_challenge_method", "S256")
 	}
 	for k, v := range parameters {
 		queryData.Add(k, v)
 	}
-	return getUrlAuth() + "?" + queryData.Encode()
+	return s.getUrlAuth() + "?" + queryData.Encode()
 }
-func getUrlAuth() string {
+func (s *socialBase) getUrlAuth() string {
 	return urlAuth
 }
 
-func formatScope() string {
+func (s *socialBase) formatScope() string {
+	log.Println(coreConfig.Scopes)
 	return strings.Join(coreConfig.Scopes, coreConfig.Separator)
 }
 func getCodeVerifier() string {
-	buf := make([]byte, 128)
-	_, err := rand.Read(buf)
-	helpers.CheckNilErr(err)
-	val, _ := bin2hex(string(buf))
-	return val
+	buf, _ := helpers.RandomBytes(32)
+	return helpers.EncodeS256(buf)
 }
 
-func getCodeChallenge() string {
+func (s *socialBase) getCodeChallenge() string {
 	h := sha256.New()
 	h.Write([]byte(codeVerifier))
-	bs := h.Sum(nil)
-	replace := make(map[string]string)
-	replace["+/"] = "-_"
-	return strings.Trim(strtr(base64.StdEncoding.EncodeToString(bs), replace), "=")
+	return helpers.EncodeS256(h.Sum(nil))
 }
 
-func bin2hex(str string) (string, error) {
-	i, err := strconv.ParseInt(str, 2, 0)
-	if err != nil {
-		return "", err
+func buildPayloadToken(code string, typeValue bool) (url.Values, map[string]interface{}) {
+	if typeValue {
+		queryData := url.Values{}
+		queryData.Add("code", code)
+		queryData.Add("grant_type", "authorization_code")
+		queryData.Add("redirect_uri", vars.RedirectUri)
+		queryData.Add("client_id", vars.ClientId)
+		queryData.Add("client_secret", vars.ClientSecret)
+		if coreConfig.UsePKCE {
+			result := strings.Split(code, ",")
+			queryData.Del("code")
+			queryData.Add("code", result[0])
+			queryData.Add("code_verifier", result[1])
+		}
+		return queryData, nil
 	}
-	return strconv.FormatInt(i, 16), nil
-}
-
-func strtr(str string, replace map[string]string) string {
-	if len(replace) == 0 || len(str) == 0 {
-		return str
-	}
-	for old, new := range replace {
-		str = strings.ReplaceAll(str, old, new)
-	}
-	return str
-}
-
-func buildPayloadToken(code string) string {
-	queryData := url.Values{}
-	queryData.Add("code", code)
-	queryData.Add("grant_type", "authorization_code")
-	queryData.Add("redirect_uri", vars.RedirectUri)
-	queryData.Add("client_id", vars.ClientId)
-	queryData.Add("client_secret", vars.ClientSecret)
+	data := make(map[string]interface{})
+	data["code"] = code
+	data["grant_type"] = "authorization_code"
+	data["redirect_uri"] = vars.RedirectUri
+	data["client_id"] = vars.ClientId
+	data["client_secret"] = vars.ClientSecret
 	if coreConfig.UsePKCE {
 		result := strings.Split(code, ",")
-		queryData.Del("code")
-		queryData.Add("code", result[0])
-		queryData.Add("code_verifier", result[1])
+		data["code"] = result[0]
+		data["code_verifier"] = result[1]
 	}
-	return queryData.Encode()
+	return nil, data
+
 }
 
 func buildPayloadRefresh(refresh string) map[string]string {
@@ -186,4 +235,10 @@ func buildPayloadRefresh(refresh string) map[string]string {
 	data["client_id"] = vars.ClientId
 	data["client_secret"] = vars.ClientSecret
 	return data
+}
+
+func headerAuthBasic() map[string]string {
+	var headers = make(map[string]string)
+	headers["Authorization"] = "Basic " + helpers.Base64Encode(vars.ClientId+":"+vars.ClientSecret)
+	return headers
 }

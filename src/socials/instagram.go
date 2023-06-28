@@ -7,19 +7,21 @@ import (
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/service"
 	"github.com/tranvannghia021/gocore/vars"
+	"log"
 	"net/url"
 	"strings"
 	"time"
 )
 
-type sFacebook struct {
+var instagram = "instagram"
+
+var scopeInS []string
+
+var fieldInS []string
+
+type sInstagram struct {
 }
-
-var facebook = "facebook"
-var scopeFb []string
-var fieldFb []string
-
-type profileFB struct {
+type profileInS struct {
 	ID        string `json:"id"`
 	Name      string `json:"name"`
 	FirstName string `json:"first_name"`
@@ -35,52 +37,37 @@ type profileFB struct {
 	} `json:"picture"`
 }
 
-func (sFacebook) loadConfig() {
+func (s sInstagram) loadConfig() {
 	coreConfig.UsePKCE = false
 	coreConfig.Separator = ","
+	urlAuth = "https://api.instagram.com/oauth/authorize"
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
-		"public_profile",
 		"email",
-	}, scopeFb...))
+		"public_profile",
+	}, scopeInS...))
 	coreConfig.Fields = helpers.RemoveDuplicateStr(append([]string{
 		"id",
-		"name",
-		"first_name",
-		"last_name",
-		"email",
-		"birthday",
-		"gender",
-		"hometown",
-		"location",
-		"picture",
-	}, fieldFb...))
-	urlAuth = fmt.Sprintf("https://www.facebook.com/%s/dialog/oauth", vars.Version)
-	parameters["display"] = "popup"
+		"username",
+	}, fieldInS...))
 }
 
-func (sFacebook) getToken(code string) vars.ResReq {
+func (s sInstagram) getToken(code string) vars.ResReq {
 	data, _ := buildPayloadToken(code, true)
-	url := fmt.Sprintf("%s/%s/oauth/access_token?%s", vars.EndPoint, vars.Version, data.Encode())
-	return service.GetRequest(url, make(map[string]string))
+	url := "https://api.instagram.com/oauth/access_token"
+	return service.PostFormDataRequest(url, nil, data)
 }
 
-func AddScopeFaceBook(scope []string) {
-	scopeFb = scope
-}
-
-func AddFieldFacebook(fields []string) {
-	fieldFb = fields
-}
-func (sFacebook) profile(token string) repositories.Core {
+func (s sInstagram) profile(token string) repositories.Core {
 	query := url.Values{}
 	query.Add("access_token", token)
-	results := service.GetRequest(fmt.Sprintf("%s/%s/me?%s&fields=%s",
-		vars.EndPoint,
-		vars.Version, query.Encode(), strings.Join(coreConfig.Fields, ",")), nil)
+	query.Add("fields", strings.Join(fieldInS, ","))
+	results := service.GetRequest(fmt.Sprintf("%s/me?",
+		vars.EndPoint, query.Encode()), nil)
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
 	}
-	var profile profileFB
+	log.Println(string(results.Data))
+	var profile profileInS
 	_ = json.Unmarshal(results.Data, &profile)
 	return repositories.Core{
 		InternalId:    profile.ID,
@@ -93,4 +80,12 @@ func (sFacebook) profile(token string) repositories.Core {
 		Avatar:        profile.Picture.Data.URL,
 		Status:        true,
 	}
+}
+
+func AddScopeInstagram(scope []string) {
+	scopeInS = scope
+}
+
+func AddFieldInstagram(fields []string) {
+	fieldInS = fields
 }
