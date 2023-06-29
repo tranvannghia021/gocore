@@ -64,6 +64,7 @@ func load(platform string) iCore {
 	vars.Tenant, _ = os.LookupEnv(fmt.Sprintf("%s_TENANT", key))
 	vars.EndPoint, _ = os.LookupEnv(fmt.Sprintf("%s_BASE_API", key))
 	vars.Version, _ = os.LookupEnv(fmt.Sprintf("%s_VERSION", key))
+
 	var typeStruct iCore
 	switch platform {
 	case google:
@@ -108,7 +109,9 @@ func load(platform string) iCore {
 	case shopify:
 		typeStruct = sShopify{}
 		break
-
+	case tiktok:
+		typeStruct = sTiktok{}
+		break
 	default:
 		helpers.CheckNilErr(errors.New("Platform not found"))
 	}

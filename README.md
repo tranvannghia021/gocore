@@ -4,7 +4,7 @@
 ## feature
 - Facebook
 - Google
-- Instagram(future)
+- Instagram
 - Twitter
 - Github
 - Linkedin
@@ -15,7 +15,7 @@
 - Reddit
 - Pinterest(future)
 - Line
-- shopify(future)
+- shopify
 ## Official Core SDKs
 <div>
 <ul>
@@ -184,17 +184,18 @@ PUSHER_APP_CLUSTER=ap1
 func apiRouter(router *mux.Router) {
     router.HandleFunc("/{platform}/generate-url", gocore.GenerateUrl).Methods("POST")
     authRouter := router.PathPrefix("/handle").Subrouter()
-    authRouter.Use(middlewaresCore.VerifyState)
+    authRouter.Use(middlewares.VerifyState)
+    authRouter.Use(middlewares.VerifyHmac) //shopify
     authRouter.HandleFunc("/auth", gocore.Auth).Methods("GET")
 }
 
 ```
 ## API :
 
-| Method  | URI                         | Action             | Middleware                   |
-|---------|-----------------------------|--------------------|------------------------------|
-| POST    | api/{platform}/generate-url | gocore.GenerateUrl |                              |
-| GET     | api/handle/auth             | gocore.Auth        | middlewaresCore.VerifyState  |
+| Method  | URI                         | Action             | Middleware                                       |
+|---------|-----------------------------|--------------------|--------------------------------------------------|
+| POST    | api/{platform}/generate-url | gocore.GenerateUrl |                                                  |
+| GET     | api/handle/auth             | gocore.Auth        | middlewares.VerifyState ,middlewares.VerifyHmac  |
 
 
 ## Config Scope
@@ -203,7 +204,7 @@ func apiRouter(router *mux.Router) {
 | -      | Scope                                    | fields                                    |
 |--------|------------------------------------------|-------------------------------------------|
 |        | AddScope{platform}(scope []string)       | AddField{platform}(fields []string)       |
-| VD     | socials.AddScopeFaceBook(scope []string) | socials.AddFieldFacebook(fields []string) |
+| VD     | socials.AddScopeFacebook(scope []string) | socials.AddFieldFacebook(fields []string) |
 
 - Support
 
@@ -220,3 +221,4 @@ func apiRouter(router *mux.Router) {
 | Microsoft | Yes    | No              |
 | Reddit    | Yes    | No              |
 | Twitter   | Yes    | Yes             |
+| Instagram | Yes    | Yes             |

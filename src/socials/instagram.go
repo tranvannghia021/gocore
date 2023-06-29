@@ -22,19 +22,8 @@ var fieldInS []string
 type sInstagram struct {
 }
 type profileInS struct {
-	ID        string `json:"id"`
-	Name      string `json:"name"`
-	FirstName string `json:"first_name"`
-	LastName  string `json:"last_name"`
-	Email     string `json:"email"`
-	Picture   struct {
-		Data struct {
-			Height       int    `json:"height"`
-			IsSilhouette bool   `json:"is_silhouette"`
-			URL          string `json:"url"`
-			Width        int    `json:"width"`
-		} `json:"data"`
-	} `json:"picture"`
+	ID       string `json:"id"`
+	Username string `json:"username"`
 }
 
 func (s sInstagram) loadConfig() {
@@ -43,7 +32,7 @@ func (s sInstagram) loadConfig() {
 	urlAuth = "https://api.instagram.com/oauth/authorize"
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"email",
-		"public_profile",
+		"user_profile",
 	}, scopeInS...))
 	coreConfig.Fields = helpers.RemoveDuplicateStr(append([]string{
 		"id",
@@ -61,7 +50,7 @@ func (s sInstagram) profile(token string) repositories.Core {
 	query := url.Values{}
 	query.Add("access_token", token)
 	query.Add("fields", strings.Join(fieldInS, ","))
-	results := service.GetRequest(fmt.Sprintf("%s/me?",
+	results := service.GetRequest(fmt.Sprintf("%s/me?%s",
 		vars.EndPoint, query.Encode()), nil)
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
@@ -71,13 +60,10 @@ func (s sInstagram) profile(token string) repositories.Core {
 	_ = json.Unmarshal(results.Data, &profile)
 	return repositories.Core{
 		InternalId:    profile.ID,
-		Platform:      facebook,
-		Email:         profile.Email,
+		Platform:      instagram,
 		EmailVerifyAt: time.Now(),
 		Password:      "",
-		FirstName:     profile.FirstName,
-		LastName:      profile.LastName,
-		Avatar:        profile.Picture.Data.URL,
+		FirstName:     profile.Username,
 		Status:        true,
 	}
 }

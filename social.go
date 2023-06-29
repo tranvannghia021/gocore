@@ -5,13 +5,12 @@ import (
 	"net/http"
 )
 
-func new() src.IHandler {
-	return src.Shandler{}
-}
+var core = src.Shandler{}
+
 func GenerateUrl(w http.ResponseWriter, r *http.Request) {
-	new().GenerateUrl(w, r)
+	core.GenerateUrl(w, r)
 }
 
 func Auth(w http.ResponseWriter, r *http.Request) {
-	new().AuthHandle(w, r)
+	core.AuthHandle(w, r)
 }
