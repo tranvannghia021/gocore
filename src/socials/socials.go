@@ -125,7 +125,7 @@ func New() social {
 	codeVerifier = getCodeVerifier()
 	return &socialBase{
 		Platform: strings.ToLower(platform),
-		Builder:  &sql.SCore{},
+		Builder:  new(sql.SCore),
 		ICore:    social,
 	}
 }
@@ -146,7 +146,6 @@ func (s *socialBase) Auth(r *http.Request) {
 		helpers.CheckNilErr(token.Error)
 		return
 	}
-	log.Println(string(token.Data))
 	var parseToken resToken
 	_ = json.Unmarshal(token.Data, &parseToken)
 	idToken = parseToken.IdToken
@@ -155,13 +154,15 @@ func (s *socialBase) Auth(r *http.Request) {
 	coreModel.RefreshToken = parseToken.RefreshToken
 	coreModel.ExpireToken = time.Now().Add(time.Duration(parseToken.ExpiresIn) * time.Millisecond)
 	coreModel.ID = uuid.New()
-	result := s.Builder.UpdateOrCreate(&coreModel)
+	s.Builder.ModelBase = &coreModel
+	result := s.Builder.UpdateOrCreate()
 	if !result.Status {
 		helpers.CheckNilErr(result.Errors)
 		return
 	}
 	helpers.FilterDataPrivate(&coreModel)
 	b, _ := json.Marshal(coreModel)
+	log.Println(string(b))
 	config.Pusher(string(b), r.Header.Get("ip"))
 }
 func (s *socialBase) buildLinkAuth(state string) string {

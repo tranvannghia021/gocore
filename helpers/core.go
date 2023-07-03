@@ -6,11 +6,16 @@ import (
 	"encoding/base64"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/vars"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
+	"image"
+	_ "image/jpeg"
+	"image/png"
 	"io"
 	"log"
 	"os"
@@ -184,4 +189,66 @@ func RandomBytes(length int) ([]byte, error) {
 		}
 	}
 
+}
+
+func HashPassword(password string) string {
+	bytes, _ := bcrypt.GenerateFromPassword([]byte(password), 14)
+	return string(bytes)
+}
+
+func CheckPasswordHash(password, hash string) bool {
+	err := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return err == nil
+}
+
+func checkValidType(base64 string) (string, bool) {
+	listExt := []string{
+		"png",
+		"jpeg",
+		"jpg",
+		"gif",
+	}
+	for _, v := range listExt {
+		if strings.Contains(base64, v) {
+			return v, true
+		}
+	}
+	return "", false
+}
+
+func Base64ToImage(base64String string, folder string) (string, error) {
+
+	typeImg, ok := checkValidType(base64String)
+	if !ok {
+		return "", errors.New("Image is invalid")
+	}
+	b64data := base64String[strings.IndexByte(base64String, ',')+1:]
+
+	data, err := base64.StdEncoding.DecodeString(b64data)
+	if err != nil {
+		return "", err
+	}
+
+	// Create a reader from the byte slice
+	reader := strings.NewReader(string(data))
+
+	// Decode the image
+	img, _, err := image.Decode(reader)
+	if err != nil {
+		return "", err
+	}
+	nameFile := Md5(typeImg+time.Now().String()) + "." + typeImg
+	pathFile := folder + nameFile
+
+	file, err := os.Create(pathFile)
+	if err != nil {
+		return "", err
+	}
+	defer file.Close()
+	err = png.Encode(file, img)
+	if err != nil {
+		return "", err
+	}
+
+	return nameFile, nil
 }

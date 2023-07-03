@@ -5,7 +5,8 @@ import (
 	"net/http"
 )
 
-var core = src.Shandler{}
+var core = src.NewHandler()
+var manager = src.NewManager()
 
 func GenerateUrl(w http.ResponseWriter, r *http.Request) {
 	core.GenerateUrl(w, r)
@@ -13,4 +14,36 @@ func GenerateUrl(w http.ResponseWriter, r *http.Request) {
 
 func Auth(w http.ResponseWriter, r *http.Request) {
 	core.AuthHandle(w, r)
+}
+func List(w http.ResponseWriter, r *http.Request) {
+	manager.List(w, r)
+}
+
+func SignIn(w http.ResponseWriter, r *http.Request) {
+	manager.SignIn(w, r)
+}
+
+func SignUp(w http.ResponseWriter, r *http.Request) {
+	manager.SignUp(w, r)
+}
+func Update(w http.ResponseWriter, r *http.Request) {
+	manager.Update(w, r)
+}
+func Show(w http.ResponseWriter, r *http.Request) {
+	manager.Show(w, r)
+}
+func Delete(w http.ResponseWriter, r *http.Request) {
+	manager.Delete(w, r)
+}
+
+func Refresh(w http.ResponseWriter, r *http.Request) {
+	manager.Refresh(w, r)
+}
+
+func Resend(w http.ResponseWriter, r *http.Request) {
+	manager.Resend(w, r)
+}
+
+func Verify(w http.ResponseWriter, r *http.Request) {
+	manager.Verify(w, r)
 }

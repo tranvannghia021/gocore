@@ -2,6 +2,7 @@ package sql
 
 import (
 	"github.com/tranvannghia021/gocore/vars"
+	_ "gorm.io/driver/postgres"
 	"gorm.io/gorm"
 	"gorm.io/gorm/clause"
 )
@@ -13,42 +14,33 @@ type IBaseSql interface {
 	Delete() ResSql
 	First() ResSql
 	Last() ResSql
-}
-type IBaseSubConfig interface {
-	SetModel(model interface{}) *SBaseSql
 	GetModel() interface{}
+	GetConnection() *gorm.DB
+	UpdateOrCreate() ResSql
 }
-
-type Smodel struct {
-	*SBaseSql
-}
-
-var modelBase interface{}
-
-var baseDB = vars.Connection
 
 type SBaseSql struct {
+	ModelBase interface{}
+	baseDB    *gorm.DB
 }
+
 type ResSql struct {
 	Status bool        `json:"status,omitempty"`
 	Data   interface{} `json:"data,omitempty"`
 	Errors error       `json:"errors,omitempty"`
 }
 
-func (s *Smodel) SetModel(model interface{}) *SBaseSql {
-	modelBase = model
-	return s.SBaseSql
-}
-func (s *Smodel) GetModel() interface{} {
-	return modelBase
+func (s *SBaseSql) GetModel() interface{} {
+	return s.ModelBase
 }
 
-func (s *Smodel) getConnection() *gorm.DB {
-	return baseDB
+func (s *SBaseSql) GetConnection() *gorm.DB {
+	s.baseDB = vars.Connection
+	return s.baseDB
 }
 
 func (s *SBaseSql) GetALL() ResSql {
-	result := baseDB.Find(&modelBase)
+	result := s.baseDB.Find(s.GetModel())
 	if result.Error != nil {
 		return ResSql{
 			Status: false,
@@ -58,13 +50,13 @@ func (s *SBaseSql) GetALL() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   modelBase,
+		Data:   s.ModelBase,
 		Errors: nil,
 	}
 }
 
 func (s *SBaseSql) Create() ResSql {
-	result := baseDB.Clauses(clause.Returning{}).Create(&modelBase)
+	result := s.GetConnection().Clauses(clause.Returning{}).Create(s.GetModel())
 	if result.Error != nil {
 		return ResSql{
 			Status: false,
@@ -74,13 +66,13 @@ func (s *SBaseSql) Create() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   modelBase,
+		Data:   s.ModelBase,
 		Errors: nil,
 	}
 }
 
 func (s *SBaseSql) Update() ResSql {
-	result := baseDB.Model(&modelBase).Updates(&modelBase)
+	result := s.GetConnection().Model(s.GetModel()).Updates(s.GetModel())
 	if result.Error != nil {
 		return ResSql{
 			Status: false,
@@ -90,13 +82,13 @@ func (s *SBaseSql) Update() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   modelBase,
+		Data:   s.ModelBase,
 		Errors: nil,
 	}
 }
 
 func (s *SBaseSql) Delete() ResSql {
-	result := baseDB.Delete(&modelBase)
+	result := s.GetConnection().Delete(s.GetModel())
 	if result.Error != nil {
 		return ResSql{
 			Status: false,
@@ -106,13 +98,13 @@ func (s *SBaseSql) Delete() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   modelBase,
+		Data:   s.ModelBase,
 		Errors: nil,
 	}
 }
 
 func (s *SBaseSql) First() ResSql {
-	result := baseDB.First(&modelBase)
+	result := s.GetConnection().First(s.GetModel())
 	if result.Error != nil {
 		return ResSql{
 			Status: false,
@@ -122,13 +114,13 @@ func (s *SBaseSql) First() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   modelBase,
+		Data:   s.ModelBase,
 		Errors: nil,
 	}
 }
 
 func (s *SBaseSql) Last() ResSql {
-	result := baseDB.Last(&modelBase)
+	result := s.GetConnection().Last(s.GetModel())
 	if result.Error != nil {
 		return ResSql{
 			Status: false,
@@ -138,7 +130,26 @@ func (s *SBaseSql) Last() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   modelBase,
+		Data:   s.ModelBase,
+		Errors: nil,
+	}
+}
+func (s *SBaseSql) UpdateOrCreate() ResSql {
+	result := s.GetConnection().Clauses(clause.OnConflict{
+		Columns: []clause.Column{{
+			Name: "internal_id",
+		}},
+		DoUpdates: clause.AssignmentColumns([]string{}),
+	}).Clauses(clause.Returning{}).Create(s.GetModel())
+	if result.Error != nil {
+		return ResSql{
+			Status: false,
+			Errors: result.Error,
+		}
+	}
+	return ResSql{
+		Status: true,
+		Data:   result,
 		Errors: nil,
 	}
 }
