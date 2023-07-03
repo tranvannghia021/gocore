@@ -50,7 +50,7 @@ func (s *SBaseSql) GetALL() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   s.ModelBase,
+		Data:   s.GetModel(),
 		Errors: nil,
 	}
 }
@@ -66,7 +66,7 @@ func (s *SBaseSql) Create() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   s.ModelBase,
+		Data:   s.GetModel(),
 		Errors: nil,
 	}
 }
@@ -82,7 +82,7 @@ func (s *SBaseSql) Update() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   s.ModelBase,
+		Data:   s.GetModel(),
 		Errors: nil,
 	}
 }
@@ -98,7 +98,7 @@ func (s *SBaseSql) Delete() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   s.ModelBase,
+		Data:   s.GetModel(),
 		Errors: nil,
 	}
 }
@@ -114,7 +114,7 @@ func (s *SBaseSql) First() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   s.ModelBase,
+		Data:   s.GetModel(),
 		Errors: nil,
 	}
 }
@@ -130,7 +130,7 @@ func (s *SBaseSql) Last() ResSql {
 	}
 	return ResSql{
 		Status: true,
-		Data:   s.ModelBase,
+		Data:   s.GetModel(),
 		Errors: nil,
 	}
 }

@@ -103,6 +103,9 @@ func isExpire(timeState time.Time) bool {
 }
 
 func DecodeJWT(tokenString string, isRefresh bool) (vars.PayloadGenerate, bool) {
+	if strings.Contains(tokenString, "Bearer") {
+		tokenString = strings.Split(tokenString, "Bearer ")[1]
+	}
 	var keyByte []byte
 	if isRefresh {
 		keyByte = getKeyRefreshJWT()
@@ -251,4 +254,51 @@ func Base64ToImage(base64String string, folder string) (string, error) {
 	}
 
 	return nameFile, nil
+}
+
+type BuildResLogin struct {
+	User repositories.Core `json:"user"`
+	Jwt  struct {
+		AccessToken   string    `json:"access_token,omitempty"`
+		RefreshToken  string    `json:"refresh_token,omitempty"`
+		ExpireToken   time.Time `json:"expire_token,omitempty"`
+		ExpireRefresh time.Time `json:"expire_refresh,omitempty"`
+		Type          string    `json:"type"`
+	} `json:"jwt"`
+}
+
+func BuildResPayloadJwt(core repositories.Core, isBuildRefresh bool) BuildResLogin {
+	timeTokenString, _ := os.LookupEnv("TIME_EXPIRE")
+	timeToken, _ := strconv.Atoi(timeTokenString)
+	timeRefreshString, _ := os.LookupEnv("TIME_PRIVATE_EXPIRE")
+	timeRefresh, _ := strconv.Atoi(timeRefreshString)
+	var payload = vars.PayloadGenerate{
+		ID:       core.ID,
+		Email:    core.Email,
+		CreateAt: time.Now().Add(time.Duration(timeToken) * time.Minute),
+	}
+	payloadRefresh := payload
+	payloadRefresh.CreateAt = time.Now().Add(time.Duration(timeRefresh) * time.Minute)
+	FilterDataPrivate(&core)
+	data := BuildResLogin{
+		User: core,
+		Jwt: struct {
+			AccessToken   string    `json:"access_token,omitempty"`
+			RefreshToken  string    `json:"refresh_token,omitempty"`
+			ExpireToken   time.Time `json:"expire_token,omitempty"`
+			ExpireRefresh time.Time `json:"expire_refresh,omitempty"`
+			Type          string    `json:"type"`
+		}{
+			AccessToken:   EncodeJWT(payload, false),
+			RefreshToken:  EncodeJWT(payloadRefresh, true),
+			ExpireToken:   payload.CreateAt,
+			ExpireRefresh: payloadRefresh.CreateAt,
+			Type:          "Bearer",
+		},
+	}
+	if !isBuildRefresh {
+		data.Jwt.ExpireRefresh = time.Time{}
+		data.Jwt.RefreshToken = ""
+	}
+	return data
 }

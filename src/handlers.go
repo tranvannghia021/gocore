@@ -7,11 +7,13 @@ import (
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
 	"github.com/tranvannghia021/gocore/helpers"
+	"github.com/tranvannghia021/gocore/src/mail"
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/repositories/sql"
 	"github.com/tranvannghia021/gocore/src/response"
 	"github.com/tranvannghia021/gocore/src/socials"
 	"github.com/tranvannghia021/gocore/vars"
+	"log"
 	"net/http"
 	"os"
 	"time"
@@ -78,11 +80,12 @@ type iManager interface {
 	SignIn(w http.ResponseWriter, r *http.Request)
 	SignUp(w http.ResponseWriter, r *http.Request)
 	Update(w http.ResponseWriter, r *http.Request)
-	Show(w http.ResponseWriter, r *http.Request)
+	Me(w http.ResponseWriter, r *http.Request)
 	Delete(w http.ResponseWriter, r *http.Request)
 	Refresh(w http.ResponseWriter, r *http.Request)
 	Resend(w http.ResponseWriter, r *http.Request)
 	Verify(w http.ResponseWriter, r *http.Request)
+	Success(w http.ResponseWriter, r *http.Request)
 }
 
 type sManager struct {
@@ -110,7 +113,26 @@ func (sManager) List(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sManager) SignIn(w http.ResponseWriter, r *http.Request) {
-
+	var core = repositories.Core{}
+	_ = json.NewDecoder(r.Body).Decode(&core)
+	password := core.Password
+	core.Platform = inApp
+	sql := new(sql.Suser)
+	sql.ModelBase = &core
+	record := sql.First()
+	if !record.Status {
+		response.Response(nil, w, true, record.Errors)
+		return
+	}
+	if !core.Status {
+		response.Response(nil, w, true, errors.New("Please verify your email"))
+		return
+	}
+	if !helpers.CheckPasswordHash(password, core.Password) {
+		response.Response(nil, w, true, errors.New("Password does not match"))
+		return
+	}
+	response.Response(helpers.BuildResPayloadJwt(core, true), w, false, nil)
 }
 
 func (sManager) SignUp(w http.ResponseWriter, r *http.Request) {
@@ -155,21 +177,55 @@ func (sManager) SignUp(w http.ResponseWriter, r *http.Request) {
 		response.Response(nil, w, true, result.Errors)
 		return
 	}
+	var payload = vars.PayloadGenerate{
+		Platform: inApp,
+		ID:       core.ID,
+		Email:    core.Email,
+		CreateAt: time.Now().Add(10 * time.Minute),
+	}
+	signature := helpers.EncodeJWT(payload, false)
+	appurl, _ := os.LookupEnv("APP_URL")
+	go log.Println("MAIL", mail.RegisterMail(core.Email, appurl+"/api/verify/email?token="+signature))
 	helpers.FilterDataPrivate(&core)
 	response.Response(core, w, false, nil)
 }
 func (sManager) Update(w http.ResponseWriter, r *http.Request) {
 
 }
-func (sManager) Show(w http.ResponseWriter, r *http.Request) {
-
+func (sManager) Me(w http.ResponseWriter, r *http.Request) {
+	var core = repositories.Core{ID: uuid.MustParse(r.Header.Get("id"))}
+	sql := new(sql.Suser)
+	sql.ModelBase = &core
+	record := sql.First()
+	if !record.Status {
+		response.Response(nil, w, true, record.Errors)
+		return
+	}
+	helpers.FilterDataPrivate(&core)
+	response.Response(core, w, false, nil)
 }
 func (sManager) Delete(w http.ResponseWriter, r *http.Request) {
-
+	var core = repositories.Core{ID: uuid.MustParse(r.Header.Get("id"))}
+	sql := new(sql.Suser)
+	sql.ModelBase = &core
+	record := sql.Delete()
+	if !record.Status {
+		response.Response(nil, w, true, record.Errors)
+		return
+	}
+	response.Response(nil, w, false, nil)
 }
 
 func (sManager) Refresh(w http.ResponseWriter, r *http.Request) {
-
+	var core = repositories.Core{ID: uuid.MustParse(r.Header.Get("id"))}
+	sql := new(sql.Suser)
+	sql.ModelBase = &core
+	record := sql.First()
+	if !record.Status {
+		response.Response(nil, w, true, record.Errors)
+		return
+	}
+	response.Response(helpers.BuildResPayloadJwt(core, false), w, false, nil)
 }
 
 func (sManager) Resend(w http.ResponseWriter, r *http.Request) {
@@ -178,4 +234,25 @@ func (sManager) Resend(w http.ResponseWriter, r *http.Request) {
 
 func (sManager) Verify(w http.ResponseWriter, r *http.Request) {
 
+	uuid, _ := uuid.FromBytes([]byte(r.Header.Get("id")))
+	userModel := new(sql.Suser)
+	core := repositories.Core{
+		ID:       uuid,
+		Platform: inApp,
+		Email:    r.Header.Get("email"),
+	}
+	userModel.ModelBase = &core
+	record := userModel.First()
+	if !record.Status {
+		response.Response(nil, w, true, record.Errors)
+		return
+	}
+	core.Status = true
+	core.IsDisconnect = false
+	userModel.Update()
+	http.Redirect(w, r, "success", 302)
+}
+
+func (sManager) Success(w http.ResponseWriter, r *http.Request) {
+	http.FileServer(http.Dir("./static/"))
 }

@@ -2,6 +2,8 @@ package vars
 
 import (
 	"github.com/go-redis/redis"
+	"github.com/google/uuid"
+	mail "github.com/xhit/go-simple-mail/v2"
 	"gorm.io/gorm"
 	"time"
 )
@@ -19,6 +21,7 @@ var (
 
 var Connection *gorm.DB
 var Redis *redis.Client
+var Mail *mail.SMTPClient
 
 type ResReq struct {
 	Status bool
@@ -35,7 +38,7 @@ type PayloadGenerate struct {
 	Ip           string
 	Platform     string
 	CodeVerifier string
-	ID           int
+	ID           uuid.UUID
 	Email        string
 	CreateAt     time.Time
 	Domain       string

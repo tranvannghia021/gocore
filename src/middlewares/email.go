@@ -7,9 +7,9 @@ import (
 	"net/http"
 )
 
-func VerifyState(next http.Handler) http.Handler {
+func VerifyEmail(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		state := r.URL.Query().Get("state")
+		state := r.URL.Query().Get("token")
 		var errors []string
 		if state == "" {
 			errors = append(errors, "Authentication failed!")

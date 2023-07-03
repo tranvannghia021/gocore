@@ -6,8 +6,10 @@ import (
 	"github.com/joho/godotenv"
 	"github.com/tranvannghia021/gocore/helpers"
 	"github.com/tranvannghia021/gocore/vars"
+	mail "github.com/xhit/go-simple-mail/v2"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
+	"log"
 	"os"
 	"strconv"
 )
@@ -44,8 +46,26 @@ func ConnectCache() {
 	vars.Redis = client
 	fmt.Println("-----------------redis CORE ready " + pong)
 }
+
+func InitMail() {
+	server := mail.NewSMTPClient()
+	server.Host, _ = os.LookupEnv("MAIL_HOST")
+	port, _ := os.LookupEnv("MAIL_PORT")
+	server.Port, _ = strconv.Atoi(port)
+	server.Username, _ = os.LookupEnv("MAIL_USERNAME")
+	server.Password, _ = os.LookupEnv("MAIL_PASSWORD")
+	server.Encryption = mail.EncryptionTLS
+
+	smtpClient, err := server.Connect()
+	if err != nil {
+		log.Fatal(err)
+	}
+	vars.Mail = smtpClient
+
+}
 func init() {
 	godotenv.Load()
 	ConnectDB()
+	InitMail()
 	ConnectCache()
 }
