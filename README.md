@@ -188,7 +188,7 @@ func apiRouter(router *mux.Router) {
     authRouter.Use(middlewares.VerifyHmac) //shopify
     authRouter.HandleFunc("/auth", gocore.Auth).Methods("GET")
 }
-
+// router api 
 func routerUser(router *mux.Router) {
     routerVerify := router.PathPrefix("/verify").Subrouter()
     routerVerify.Use(middlewaresCore.VerifyEmail)
@@ -209,6 +209,8 @@ func routerUser(router *mux.Router) {
 }
 
 vars.User // variable global user use anywhere
+
+add middleware group api router.Use(middlewaresCore.Core)
 
 ```
 ## API :

@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/tranvannghia021/gocore/src/repositories"
+	"github.com/tranvannghia021/gocore/src/response"
 	"github.com/tranvannghia021/gocore/vars"
 	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
@@ -26,12 +27,8 @@ import (
 
 func CheckNilErr(err error) {
 	if err != nil {
-		//var w io.Writer
-		//panic(err)
-		log.Println("DEBUG_ERR:  ", err)
-		//var w http.ResponseWriter
-		//fmt.Fprintf(w, "Invalid request body error:%sâ€", err.Error())
-		//json.NewEncoder(w).Encode("adsaas")
+		response.Response(nil, vars.Wh, true, err)
+		return
 	}
 }
 

@@ -6,6 +6,7 @@ import (
 	"github.com/tranvannghia021/gocore/src/repositories"
 	mail "github.com/xhit/go-simple-mail/v2"
 	"gorm.io/gorm"
+	"net/http"
 	"time"
 )
 
@@ -24,6 +25,7 @@ var Connection *gorm.DB
 var Redis *redis.Client
 var Mail *mail.SMTPClient
 var User *repositories.Core
+var Wh http.ResponseWriter
 
 type ResReq struct {
 	Status bool
