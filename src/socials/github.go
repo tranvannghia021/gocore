@@ -81,6 +81,7 @@ func (s sGithub) profile(token string) repositories.Core {
 	results := service.GetRequest(fmt.Sprintf("%s/user", vars.EndPoint), headers)
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
+		return repositories.Core{}
 	}
 	var profile profileGh
 	_ = json.Unmarshal(results.Data, &profile)

@@ -59,6 +59,7 @@ func (g sGoogle) profile(token string) repositories.Core {
 		vars.Version, token), map[string]string{})
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
+		return repositories.Core{}
 	}
 	var profile profileGg
 	_ = json.Unmarshal(results.Data, &profile)

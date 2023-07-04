@@ -7,7 +7,6 @@ import (
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/service"
 	"github.com/tranvannghia021/gocore/vars"
-	"log"
 	"net/url"
 	"strings"
 	"time"
@@ -54,8 +53,8 @@ func (s sInstagram) profile(token string) repositories.Core {
 		vars.EndPoint, query.Encode()), nil)
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
+		return repositories.Core{}
 	}
-	log.Println(string(results.Data))
 	var profile profileInS
 	_ = json.Unmarshal(results.Data, &profile)
 	return repositories.Core{

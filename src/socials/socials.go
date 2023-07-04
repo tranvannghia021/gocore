@@ -150,6 +150,10 @@ func (s *socialBase) Auth(r *http.Request) {
 	_ = json.Unmarshal(token.Data, &parseToken)
 	idToken = parseToken.IdToken
 	coreModel := s.ICore.profile(parseToken.AccessToken)
+	if coreModel.InternalId == "" {
+		helpers.CheckNilErr(errors.New("authentication failed"))
+		return
+	}
 	coreModel.AccessToken = parseToken.AccessToken
 	coreModel.RefreshToken = parseToken.RefreshToken
 	coreModel.ExpireToken = time.Now().Add(time.Duration(parseToken.ExpiresIn) * time.Millisecond)

@@ -79,6 +79,7 @@ func (sFacebook) profile(token string) repositories.Core {
 		vars.Version, query.Encode(), strings.Join(coreConfig.Fields, ",")), nil)
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
+		return repositories.Core{}
 	}
 	var profile profileFB
 	_ = json.Unmarshal(results.Data, &profile)
