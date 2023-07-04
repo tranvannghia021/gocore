@@ -2,8 +2,12 @@ package middlewares
 
 import (
 	errors2 "errors"
+	"github.com/google/uuid"
 	"github.com/tranvannghia021/gocore/helpers"
+	"github.com/tranvannghia021/gocore/src/repositories"
+	sql2 "github.com/tranvannghia021/gocore/src/repositories/sql"
 	"github.com/tranvannghia021/gocore/src/response"
+	"github.com/tranvannghia021/gocore/vars"
 	"net/http"
 )
 
@@ -22,6 +26,7 @@ func Auth(next http.Handler) http.Handler {
 			r.Header.Set("code_verifier", data.CodeVerifier)
 			r.Header.Set("ip", data.Ip)
 			r.Header.Set("email", data.Email)
+			globalVariantUser(data.ID)
 			r.Header.Set("id", data.ID.String())
 
 		}
@@ -33,4 +38,15 @@ func Auth(next http.Handler) http.Handler {
 
 		next.ServeHTTP(w, r)
 	})
+}
+
+func globalVariantUser(id uuid.UUID) {
+	var core = repositories.Core{ID: id}
+	sql := new(sql2.Suser)
+	sql.ModelBase = &core
+	result := sql.First()
+	if result.Status {
+		vars.User = &core
+	}
+
 }

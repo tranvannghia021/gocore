@@ -189,13 +189,44 @@ func apiRouter(router *mux.Router) {
     authRouter.HandleFunc("/auth", gocore.Auth).Methods("GET")
 }
 
+func routerUser(router *mux.Router) {
+    routerVerify := router.PathPrefix("/verify").Subrouter()
+    routerVerify.Use(middlewaresCore.VerifyEmail)
+    routerVerify.HandleFunc("/email", gocore.Verify).Methods("GET")
+    router.HandleFunc("/register", gocore.SignUp).Methods("POST")
+    router.HandleFunc("/re-send", gocore.Resend).Methods("POST") // type=?/register|forgot
+    router.HandleFunc("/login", gocore.SignIn).Methods("POST")
+    routerUser := router.PathPrefix("/user").Subrouter()
+    routerUser.Use(middlewaresCore.Auth)
+    routerUser.HandleFunc("", gocore.Me).Methods("GET")
+    routerUser.HandleFunc("", gocore.Update).Methods("PUT")
+    routerUser.HandleFunc("", gocore.Delete).Methods("DELETE")
+    router.HandleFunc("/user/forgot", gocore.Forgot).Methods("PUT")
+    routerRefresh := router.PathPrefix("/refresh").Subrouter()
+    routerRefresh.Use(middlewaresCore.Refresh)
+    routerRefresh.HandleFunc("", gocore.Refresh).Methods("GET")
+    router.HandleFunc("/verify/success", gocore.Success).Methods("GET")
+}
+
+vars.User // variable global user use anywhere
+
 ```
 ## API :
 
-| Method  | URI                         | Action             | Middleware                                       |
-|---------|-----------------------------|--------------------|--------------------------------------------------|
-| POST    | api/{platform}/generate-url | gocore.GenerateUrl |                                                  |
-| GET     | api/handle/auth             | gocore.Auth        | middlewares.VerifyState ,middlewares.VerifyHmac  |
+| Method | URI                         | Action              | Middleware                                      |
+|--------|-----------------------------|---------------------|-------------------------------------------------|
+| POST   | api/{platform}/generate-url | gocore.GenerateUrl  |                                                 |
+| GET    | api/handle/auth             | gocore.Auth         | middlewares.VerifyState ,middlewares.VerifyHmac |
+| GET    | api/verify/email            | gocore.Verify       | middlewares.VerifyEmail                         |
+| POST   | api/register                | gocore.SignUp       |                                                 |
+| POST   | api/re-send                 | gocore.Resend       |                                                 |
+| POST   | api/login                   | gocore.SignIn       |                                                 |
+| GET    | api/user                    | gocore.Me           | middlewares.Auth                                |
+| PUT    | api/user                    | gocore.Update       | middlewares.Auth                                |
+| DELETE | api/user                    | gocore.Delete       | middlewares.Auth                                |
+| PUT    | api/user/forgot             | gocore.Forgot       |                                                 |
+| GET    | api/refresh                 | gocore.Refresh      | middlewares.Refresh                             |
+
 
 
 ## Config Scope

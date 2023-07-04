@@ -47,3 +47,7 @@ func Verify(w http.ResponseWriter, r *http.Request) {
 func Success(w http.ResponseWriter, r *http.Request) {
 	manager.Success(w, r)
 }
+
+func Forgot(w http.ResponseWriter, r *http.Request) {
+	manager.Forgot(w, r)
+}

@@ -1,0 +1,95 @@
+```register  ```
+```
+
+curl --location 'https://test-localhost.ap.ngrok.io/api/register' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email":"tranvannghia021@gmail.com",
+    "password":"123456789",
+    "confirm":"123456789",
+    "first_name":"nghia",
+    "last_name":"tran",
+    "gender":"male",
+    "avatar":"base64",
+    "phone":"0987567923"
+
+}'
+```
+
+``re-send register verify email``
+```
+curl --location 'https://test-localhost.ap.ngrok.io/api/re-send?type=register' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email":"tranvannghia021@gmail.com"
+
+}'
+```
+
+``re-send forgot email``
+```
+curl --location 'https://test-localhost.ap.ngrok.io/api/re-send?type=forgot' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email":"tranvannghia021@gmail.com"
+
+}'
+```
+
+```login ```
+```
+curl --location 'https://test-localhost.ap.ngrok.io/api/login' \
+--header 'Content-Type: application/json' \
+--data-raw '{
+    "email":"tranvannghia021@gmail.com",
+    "password":"123456789"
+
+}'
+```
+
+```refresh token   ```
+```
+curl --location --request GET 'https://test-localhost.ap.ngrok.io/api/refresh' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer token' \
+--data-raw '{
+    "email":"tranvannghia021@gmail.com",
+    "password":"123456789"
+}'
+```
+
+```Me ```
+
+```
+curl --location --request GET 'https://test-localhost.ap.ngrok.io/api/user' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer token' \
+--data-raw '{
+}'
+```
+
+```update user```
+```
+curl --location --request PUT 'https://test-localhost.ap.ngrok.io/api/user' \
+--header 'Content-Type: application/json' \
+--header 'Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJDb2RlVmVyaWZpZXIiOiIiLCJDcmVhdGVBdCI6IjIwMjMtMDctMDVUMDI6Mzc6NDQuOTczNzIyKzA3OjAwIiwiRW1haWwiOiJ0cmFudmFubmdoaWEwMjFAZ21haWwuY29tIiwiSUQiOiJmNmE2ZjI0NS01NWU2LTQ5Y2QtYTYyZC0zOGNiZDkyYzRjOWUiLCJJcCI6IiIsIlBsYXRmb3JtIjoiIn0.H9lZfitHMCyRryOzTYeHkpwymeJDu3-_8ayozmndkwo' \
+--data-raw '{
+    "confirm":"123456789",
+    "first_name":"nghia11",
+    "last_name":"tran",
+    "gender":"male",
+    "avatar":"",
+    "phone":"0987567923"
+}'
+```
+``` forgot pass```
+``` need call re-send forgot take data info in pusher
+curl --location --request PUT 'https://test-localhost.ap.ngrok.io/api/user/forgot' \
+--header 'Content-Type: application/json' \
+--data '{
+     "id": "f6a6f245-55e6-49cd-a62d-38cbd92c4c9e",
+    "old_pass":"123456789",
+    "new_pass":"123456780"
+
+}'
+```

@@ -3,6 +3,7 @@ package vars
 import (
 	"github.com/go-redis/redis"
 	"github.com/google/uuid"
+	"github.com/tranvannghia021/gocore/src/repositories"
 	mail "github.com/xhit/go-simple-mail/v2"
 	"gorm.io/gorm"
 	"time"
@@ -22,6 +23,7 @@ var (
 var Connection *gorm.DB
 var Redis *redis.Client
 var Mail *mail.SMTPClient
+var User *repositories.Core
 
 type ResReq struct {
 	Status bool

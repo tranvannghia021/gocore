@@ -117,7 +117,7 @@ func DecodeJWT(tokenString string, isRefresh bool) (vars.PayloadGenerate, bool) 
 	})
 	claims, _ := token.Claims.(*jwt.MapClaims)
 	if !token.Valid {
-		panic(err)
+		log.Fatal(err)
 	}
 	jsonString, _ := json.Marshal(claims)
 	_ = json.Unmarshal(jsonString, &vars.Payload)

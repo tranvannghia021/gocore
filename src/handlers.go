@@ -6,6 +6,7 @@ import (
 	"github.com/go-playground/validator"
 	"github.com/google/uuid"
 	"github.com/gorilla/mux"
+	"github.com/tranvannghia021/gocore/config"
 	"github.com/tranvannghia021/gocore/helpers"
 	"github.com/tranvannghia021/gocore/src/mail"
 	"github.com/tranvannghia021/gocore/src/repositories"
@@ -86,6 +87,7 @@ type iManager interface {
 	Resend(w http.ResponseWriter, r *http.Request)
 	Verify(w http.ResponseWriter, r *http.Request)
 	Success(w http.ResponseWriter, r *http.Request)
+	Forgot(w http.ResponseWriter, r *http.Request)
 }
 
 type sManager struct {
@@ -97,8 +99,8 @@ func NewManager() iManager {
 
 type payloadBody struct {
 	Email     string    `json:"email,omitempty" validate:"required,email"`
-	Password  string    `json:"password,omitempty" validate:"required,min=8,max=32"`
-	Confirm   string    `json:"confirm,omitempty" validate:"required,min=8,max=32"`
+	Password  string    `json:"password,omitempty" validate:"required,min=8"`
+	Confirm   string    `json:"confirm,omitempty" validate:"required,min=8"`
 	FirstName string    `json:"first_name,omitempty" validate:"required"`
 	LastName  string    `json:"last_name,omitempty"  validate:"required"`
 	Avatar    string    `json:"avatar,omitempty"`
@@ -185,29 +187,36 @@ func (sManager) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	signature := helpers.EncodeJWT(payload, false)
 	appurl, _ := os.LookupEnv("APP_URL")
-	go log.Println("MAIL", mail.RegisterMail(core.Email, appurl+"/api/verify/email?token="+signature))
+	go log.Println("MAIL", mail.RegisterMail(core.Email, appurl+"/api/verify/email?type=register&token="+signature))
 	helpers.FilterDataPrivate(&core)
 	response.Response(core, w, false, nil)
 }
 func (sManager) Update(w http.ResponseWriter, r *http.Request) {
-
-}
-func (sManager) Me(w http.ResponseWriter, r *http.Request) {
-	var core = repositories.Core{ID: uuid.MustParse(r.Header.Get("id"))}
-	sql := new(sql.Suser)
-	sql.ModelBase = &core
-	record := sql.First()
-	if !record.Status {
-		response.Response(nil, w, true, record.Errors)
-		return
+	var core repositories.Core
+	_ = json.NewDecoder(r.Body).Decode(&core)
+	vars.User.Phone = core.Phone
+	vars.User.Address = core.Address
+	vars.User.FirstName = core.FirstName
+	vars.User.LastName = core.LastName
+	vars.User.Gender = core.Gender
+	vars.User.BirthDay = core.BirthDay
+	if core.Avatar != "" {
+		vars.User.Avatar, _ = helpers.Base64ToImage(core.Avatar, "./avatar")
 	}
-	helpers.FilterDataPrivate(&core)
-	response.Response(core, w, false, nil)
+	sql := new(sql.Suser)
+	sql.ModelBase = vars.User
+	result := sql.Update()
+	response.Response(result.Data, w, !result.Status, result.Errors)
+}
+
+func (sManager) Me(w http.ResponseWriter, r *http.Request) {
+	helpers.FilterDataPrivate(vars.User)
+	response.Response(vars.User, w, false, nil)
 }
 func (sManager) Delete(w http.ResponseWriter, r *http.Request) {
-	var core = repositories.Core{ID: uuid.MustParse(r.Header.Get("id"))}
+
 	sql := new(sql.Suser)
-	sql.ModelBase = &core
+	sql.ModelBase = vars.User
 	record := sql.Delete()
 	if !record.Status {
 		response.Response(nil, w, true, record.Errors)
@@ -229,11 +238,38 @@ func (sManager) Refresh(w http.ResponseWriter, r *http.Request) {
 }
 
 func (sManager) Resend(w http.ResponseWriter, r *http.Request) {
+	param := r.URL.Query()
+	var core repositories.Core
+	_ = json.NewDecoder(r.Body).Decode(&core)
+	if core.Email == "" {
+		response.Response(nil, w, true, errors.New("Email is required"))
+		return
+	}
+	sql := new(sql.Suser)
+	sql.ModelBase = &core
+	result := sql.First()
+	if !result.Status || param.Get("type") == "" {
+		response.Response(nil, w, true, result.Errors)
+		return
+	}
 
+	go func() {
+		var payload = vars.PayloadGenerate{
+			Email: core.Email,
+			ID:    core.ID,
+		}
+		signature := helpers.EncodeJWT(payload, false)
+		appurl, _ := os.LookupEnv("APP_URL")
+		log.Println("MAIL", mail.RegisterMail(core.Email, appurl+"/api/verify/email?type="+param.Get("type")+"&token="+signature))
+	}()
+	response.Response(nil, w, false, nil)
 }
 
 func (sManager) Verify(w http.ResponseWriter, r *http.Request) {
-
+	if r.URL.Query().Get("type") != "register" {
+		forgotVerify(w, r)
+		return
+	}
 	uuid, _ := uuid.FromBytes([]byte(r.Header.Get("id")))
 	userModel := new(sql.Suser)
 	core := repositories.Core{
@@ -250,9 +286,48 @@ func (sManager) Verify(w http.ResponseWriter, r *http.Request) {
 	core.Status = true
 	core.IsDisconnect = false
 	userModel.Update()
-	http.Redirect(w, r, "success", 302)
+	http.Redirect(w, r, "/success", 302)
 }
 
 func (sManager) Success(w http.ResponseWriter, r *http.Request) {
-	http.FileServer(http.Dir("./static/"))
+	//http.FileServer(http.Dir("./static/"))
+}
+
+func forgotVerify(w http.ResponseWriter, r *http.Request) {
+	uuid, _ := uuid.FromBytes([]byte(r.Header.Get("id")))
+	userModel := new(sql.Suser)
+	core := repositories.Core{
+		ID:       uuid,
+		Platform: inApp,
+		Email:    r.Header.Get("email"),
+	}
+	userModel.ModelBase = &core
+	record := userModel.First()
+	if !record.Status {
+		response.Response(nil, w, true, record.Errors)
+		return
+	}
+	config.Pusher(core, "forgot_"+core.Email)
+	http.Redirect(w, r, "/success", 302)
+}
+
+type ForgotPassword struct {
+	ID      uuid.UUID `json:"id,omitempty"`
+	NewPass string    `json:"new_pass" validate:"required"`
+}
+
+func (sManager) Forgot(w http.ResponseWriter, r *http.Request) {
+	var forgot ForgotPassword
+	_ = json.NewDecoder(r.Body).Decode(&forgot)
+	var core = repositories.Core{ID: forgot.ID}
+	sql := new(sql.Suser)
+	sql.ModelBase = &core
+	result := sql.First()
+	if !result.Status {
+		response.Response(nil, w, true, result.Errors)
+		return
+	}
+	core.Password = helpers.HashPassword(forgot.NewPass)
+	sql.Update()
+	response.Response(nil, w, false, nil)
 }
