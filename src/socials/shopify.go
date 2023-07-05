@@ -15,6 +15,7 @@ import (
 var shopify = "shopify"
 
 type sShopify struct {
+	http *service.SHttpRequest
 }
 
 var (
@@ -83,26 +84,30 @@ type shopInfo struct {
 	} `json:"shop"`
 }
 
-func (s sShopify) loadConfig() {
+func (s *sShopify) loadConfig() {
 	coreConfig.Separator = ","
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"unauthenticated_read_product_listings",
 	}, scopeSp...))
 	domain = singletons.InstancePayload().Domain
 	urlAuth = fmt.Sprintf("https://%s/admin/oauth/authorize", domain)
-
+	s.http = service.NewHttpRequest()
 }
 
-func (s sShopify) getToken(code string) vars.ResReq {
+func (s *sShopify) getToken(code string) vars.ResReq {
 	body, _ := buildPayloadToken(code, true)
-	return service.PostFormDataRequest(fmt.Sprintf("https://%s/admin/oauth/access_token", domain), nil, body)
+	s.http.Url = fmt.Sprintf("https://%s/admin/oauth/access_token", domain)
+	s.http.FormData = body
+	return s.http.PostFormDataRequest()
 }
 
-func (s sShopify) profile(token string) repositories.Core {
+func (s *sShopify) profile(token string) repositories.Core {
 	s.setParameter(domain)
 	var headers = make(map[string]string)
 	headers["X-Shopify-Access-Token"] = token
-	result := service.GetRequest(fmt.Sprintf("%s/shop.json", vars.EndPoint), headers)
+	s.http.Headers = headers
+	s.http.Url = fmt.Sprintf("%s/shop.json", vars.EndPoint)
+	result := s.http.GetRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}
@@ -124,7 +129,7 @@ func (s sShopify) profile(token string) repositories.Core {
 	}
 }
 
-func (s sShopify) setParameter(rawDomain string) {
+func (s *sShopify) setParameter(rawDomain string) {
 	domain = rawDomain
 	vars.EndPoint = fmt.Sprintf("https://%s/admin/api/%s", rawDomain, vars.Version)
 }

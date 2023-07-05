@@ -19,13 +19,14 @@ var scopeInS []string
 var fieldInS []string
 
 type sInstagram struct {
+	http *service.SHttpRequest
 }
 type profileInS struct {
 	ID       string `json:"id"`
 	Username string `json:"username"`
 }
 
-func (s sInstagram) loadConfig() {
+func (s *sInstagram) loadConfig() {
 	coreConfig.UsePKCE = false
 	coreConfig.Separator = ","
 	urlAuth = "https://api.instagram.com/oauth/authorize"
@@ -37,20 +38,22 @@ func (s sInstagram) loadConfig() {
 		"id",
 		"username",
 	}, fieldInS...))
+	s.http = service.NewHttpRequest()
 }
 
-func (s sInstagram) getToken(code string) vars.ResReq {
-	data, _ := buildPayloadToken(code, true)
-	url := "https://api.instagram.com/oauth/access_token"
-	return service.PostFormDataRequest(url, nil, data)
+func (s *sInstagram) getToken(code string) vars.ResReq {
+	s.http.FormData, _ = buildPayloadToken(code, true)
+	s.http.Url = "https://api.instagram.com/oauth/access_token"
+	return s.http.PostFormDataRequest()
 }
 
-func (s sInstagram) profile(token string) repositories.Core {
+func (s *sInstagram) profile(token string) repositories.Core {
 	query := url.Values{}
 	query.Add("access_token", token)
 	query.Add("fields", strings.Join(fieldInS, ","))
-	results := service.GetRequest(fmt.Sprintf("%s/me?%s",
-		vars.EndPoint, query.Encode()), nil)
+	s.http.Url = fmt.Sprintf("%s/me?%s",
+		vars.EndPoint, query.Encode())
+	results := s.http.GetRequest()
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
 		return repositories.Core{}

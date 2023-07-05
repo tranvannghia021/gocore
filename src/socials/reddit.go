@@ -13,6 +13,7 @@ import (
 var reddit = "reddit"
 
 type sReddit struct {
+	http *service.SHttpRequest
 }
 
 var scopeRd []string
@@ -178,7 +179,7 @@ type profileRd struct {
 	SeenSubredditChatFtux   bool     `json:"seen_subreddit_chat_ftux"`
 }
 
-func (s sReddit) loadConfig() {
+func (s *sReddit) loadConfig() {
 	coreConfig.Separator = " "
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"account",
@@ -186,18 +187,19 @@ func (s sReddit) loadConfig() {
 	}, scopeRd...))
 	urlAuth = "https://www.reddit.com/api/v1/authorize"
 	parameters["duration"] = "permanent"
+	s.http = service.NewHttpRequest()
 }
 
-func (s sReddit) getToken(code string) vars.ResReq {
+func (s *sReddit) getToken(code string) vars.ResReq {
 	body, _ := buildPayloadToken(code, true)
-	return service.PostRequest(fmt.Sprintf("https://www.reddit.com/api/v1/access_token?%s", body.Encode()), headerAuthBasic(), nil)
+	s.http.Url = fmt.Sprintf("https://www.reddit.com/api/v1/access_token?%s", body.Encode())
+	s.http.Headers = headerAuthBasic()
+	return s.http.PostRequest()
 }
 
-func (s sReddit) profile(token string) repositories.Core {
-	var headers = make(map[string]string)
-	headers["Authorization"] = "Bearer " + token
-	headers["Content-Type"] = "application/json"
-	result := service.GetRequest(fmt.Sprintf("%s/api/%s/me", vars.EndPoint, vars.Version), headers)
+func (s *sReddit) profile(token string) repositories.Core {
+	s.http.Url = fmt.Sprintf("%s/api/%s/me", vars.EndPoint, vars.Version)
+	result := s.http.SetAuth(token).GetRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}

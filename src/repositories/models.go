@@ -27,9 +27,3 @@ type Core struct {
 	Domain        string    `json:"domain,omitempty"`
 	RawDomain     string    `json:"raw_domain,omitempty"`
 }
-
-type ResSql struct {
-	Status bool        `json:"status,omitempty"`
-	Data   interface{} `json:"data,omitempty"`
-	Errors error       `json:"errors,omitempty"`
-}

@@ -1,7 +1,6 @@
 package service
 
 import (
-	"encoding/json"
 	"github.com/tranvannghia021/gocore/vars"
 	"io"
 	"io/ioutil"
@@ -10,103 +9,117 @@ import (
 	"strings"
 )
 
-func HandleErrorReg(err error) vars.ResReq {
-	return vars.ResReq{
-		Status: false,
-		Data:   nil,
-		Error:  err,
-	}
+type iHttpRequest interface {
+	HandleErrorReq(body []byte) vars.ResReq
+	GetRequest() vars.ResReq
+	PostRequest() vars.ResReq
+	PostFormDataRequest() vars.ResReq
+	PutRequest() vars.ResReq
+	DeleteRequest() vars.ResReq
+	SetAuth(token string) *SHttpRequest
 }
-func GetRequest(url string, headers map[string]string) vars.ResReq {
-	req, err := http.NewRequest("GET", url, nil)
-	for k, v := range headers {
-		req.Header.Add(k, v)
-	}
-	client := &http.Client{}
-	res, err := client.Do(req)
-	HandleErrorReg(err)
-	defer res.Body.Close()
-	body, err := ioutil.ReadAll(res.Body)
+type SHttpRequest struct {
+	Url      string            `json:"url,omitempty"`
+	Headers  map[string]string `json:"headers,omitempty"`
+	Body     io.Reader         `json:"body,omitempty"`
+	FormData url.Values        `json:"form_data,omitempty"`
+	Err      error             `json:"err,omitempty"`
+}
 
-	HandleErrorReg(err)
+func NewHttpRequest() *SHttpRequest {
+	return &SHttpRequest{}
+}
+
+func (s *SHttpRequest) SetAuth(token string) *SHttpRequest {
+	if s.Headers == nil {
+		s.Headers = make(map[string]string)
+	}
+	s.Headers["Authorization"] = "Bearer " + token
+	return s
+}
+func (s *SHttpRequest) HandleErrorReq(body []byte) vars.ResReq {
+	if s.Err != nil {
+		return vars.ResReq{
+			Status: false,
+			Data:   nil,
+			Error:  s.Err,
+		}
+	}
 	return vars.ResReq{
 		Status: true,
 		Data:   body,
 		Error:  nil,
 	}
 }
-
-func PostRequest(url string, headers map[string]string, body map[string]interface{}) vars.ResReq {
-	byte, _ := json.Marshal(body)
-	result := strings.NewReader(string(byte))
-	req, err := http.NewRequest("POST", url, result)
-	for k, v := range headers {
+func (s *SHttpRequest) GetRequest() vars.ResReq {
+	req, err := http.NewRequest("GET", s.Url, nil)
+	for k, v := range s.Headers {
 		req.Header.Add(k, v)
 	}
+	req.Header.Add("Content-Type", "application/json")
 	client := &http.Client{}
 	res, err := client.Do(req)
-	HandleErrorReg(err)
+	s.Err = err
 	defer res.Body.Close()
-	data, err := ioutil.ReadAll(res.Body)
-	HandleErrorReg(err)
-	return vars.ResReq{
-		Status: true,
-		Data:   data,
-		Error:  nil,
-	}
+	body, err := ioutil.ReadAll(res.Body)
+	s.Err = err
+	return s.HandleErrorReq(body)
 }
 
-func PostFormDataRequest(url string, headers map[string]string, body url.Values) vars.ResReq {
-	req, err := http.NewRequest("POST", url, strings.NewReader(body.Encode()))
-	for k, v := range headers {
+func (s *SHttpRequest) PostRequest() vars.ResReq {
+	req, err := http.NewRequest("POST", s.Url, s.Body)
+	for k, v := range s.Headers {
+		req.Header.Add(k, v)
+	}
+	req.Header.Add("Content-Type", "application/json")
+	client := &http.Client{}
+	res, err := client.Do(req)
+	s.Err = err
+	defer res.Body.Close()
+	data, err := ioutil.ReadAll(res.Body)
+	s.Err = err
+	return s.HandleErrorReq(data)
+}
+
+func (s *SHttpRequest) PostFormDataRequest() vars.ResReq {
+	req, err := http.NewRequest("POST", s.Url, strings.NewReader(s.FormData.Encode()))
+	for k, v := range s.Headers {
 		req.Header.Add(k, v)
 	}
 	req.Header.Add("Content-Type", "application/x-www-form-urlencoded")
 	client := &http.Client{}
 	res, err := client.Do(req)
-	HandleErrorReg(err)
+	s.Err = err
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
-	HandleErrorReg(err)
-	return vars.ResReq{
-		Status: true,
-		Data:   data,
-		Error:  nil,
-	}
+	s.Err = err
+	return s.HandleErrorReq(data)
 }
 
-func PutRequest(url string, headers map[string]string, body io.Reader) vars.ResReq {
-	req, err := http.NewRequest("PUT", url, body)
-	for k, v := range headers {
+func (s *SHttpRequest) PutRequest() vars.ResReq {
+	req, err := http.NewRequest("PUT", s.Url, s.Body)
+	for k, v := range s.Headers {
 		req.Header.Add(k, v)
 	}
 	client := &http.Client{}
 	res, err := client.Do(req)
-	HandleErrorReg(err)
+	s.Err = err
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
-	HandleErrorReg(err)
-	return vars.ResReq{
-		Status: true,
-		Data:   data,
-		Error:  nil,
-	}
+	s.Err = err
+	return s.HandleErrorReq(data)
 }
 
-func DeleteRequest(url string, headers map[string]string, body io.Reader) vars.ResReq {
-	req, err := http.NewRequest("DELETE", url, body)
-	for k, v := range headers {
+func (s *SHttpRequest) DeleteRequest() vars.ResReq {
+	req, err := http.NewRequest("DELETE", s.Url, s.Body)
+	for k, v := range s.Headers {
 		req.Header.Add(k, v)
 	}
 	client := &http.Client{}
 	res, err := client.Do(req)
-	HandleErrorReg(err)
+	s.Err = err
 	defer res.Body.Close()
 	data, err := ioutil.ReadAll(res.Body)
-	HandleErrorReg(err)
-	return vars.ResReq{
-		Status: true,
-		Data:   data,
-		Error:  nil,
-	}
+	s.Err = err
+	return s.HandleErrorReq(data)
 }

@@ -13,6 +13,7 @@ import (
 var tiktok = "tiktok"
 
 type sTiktok struct {
+	http *service.SHttpRequest
 }
 
 var (
@@ -43,14 +44,14 @@ func (s sTiktok) loadConfig() {
 
 }
 func (s sTiktok) getToken(code string) vars.ResReq {
-	body, _ := buildPayloadToken(code, true)
-	return service.PostFormDataRequest(fmt.Sprintf("%s/%s/oauth/token/", vars.EndPoint, vars.Version), nil, body)
+	s.http.FormData, _ = buildPayloadToken(code, true)
+	s.http.Url = fmt.Sprintf("%s/%s/oauth/token/", vars.EndPoint, vars.Version)
+	return s.http.PostFormDataRequest()
 }
 
 func (s sTiktok) profile(token string) repositories.Core {
-	var headers = make(map[string]string)
-	headers["Authorization"] = "Bearer " + token
-	result := service.GetRequest(fmt.Sprintf("%s/%s/user/info/%s", vars.EndPoint, vars.Version, strings.Join(coreConfig.Fields, "&")), headers)
+	s.http.Url = fmt.Sprintf("%s/%s/user/info/%s", vars.EndPoint, vars.Version, strings.Join(coreConfig.Fields, "&"))
+	result := s.http.SetAuth(token).GetRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}

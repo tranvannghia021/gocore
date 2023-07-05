@@ -13,6 +13,7 @@ import (
 var dropbox = "dropbox"
 
 type sDropbox struct {
+	http *service.SHttpRequest
 }
 
 var scopeDb []string
@@ -43,25 +44,26 @@ type profileDb struct {
 	} `json:"root_info"`
 }
 
-func (s sDropbox) loadConfig() {
+func (s *sDropbox) loadConfig() {
 	coreConfig.UsePKCE = true
 	coreConfig.Separator = ","
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"account_info.read",
 	}, scopeDb...))
 	urlAuth = "https://www.dropbox.com/oauth2/authorize"
+	s.http = service.NewHttpRequest()
 }
 
-func (s sDropbox) getToken(code string) vars.ResReq {
-	body, _ := buildPayloadToken(code, true)
-	return service.PostFormDataRequest(fmt.Sprintf("%s/oauth2/token", vars.EndPoint), nil, body)
+func (s *sDropbox) getToken(code string) vars.ResReq {
+	s.http.FormData, _ = buildPayloadToken(code, true)
+	s.http.Url = fmt.Sprintf("%s/oauth2/token", vars.EndPoint)
+	return s.http.PostFormDataRequest()
 }
 
-func (s sDropbox) profile(token string) repositories.Core {
-	var headers = make(map[string]string)
-	headers["Authorization"] = "Bearer " + token
-	headers["Content-Type"] = "application/json"
-	result := service.PostRequest(fmt.Sprintf("%s/%s/users/get_current_account", vars.EndPoint, vars.Version), headers, nil)
+func (s *sDropbox) profile(token string) repositories.Core {
+	s.http.Url = fmt.Sprintf("%s/%s/users/get_current_account", vars.EndPoint, vars.Version)
+	s.http.PostRequest()
+	result := s.http.SetAuth(token).PostRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}

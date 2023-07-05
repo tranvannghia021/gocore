@@ -70,49 +70,49 @@ func load(platform string) iCore {
 	var typeStruct iCore
 	switch platform {
 	case google:
-		typeStruct = sGoogle{}
+		typeStruct = &sGoogle{}
 		break
 	case facebook:
-		typeStruct = sFacebook{}
+		typeStruct = &sFacebook{}
 		break
 	case instagram:
-		typeStruct = sInstagram{}
+		typeStruct = &sInstagram{}
 		break
 	case github:
-		typeStruct = sGithub{}
+		typeStruct = &sGithub{}
 		break
 	case twitter:
-		typeStruct = sTwitter{}
+		typeStruct = &sTwitter{}
 		break
 	case bitbucket:
-		typeStruct = sBitbucket{}
+		typeStruct = &sBitbucket{}
 		break
 	case dropbox:
-		typeStruct = sDropbox{}
+		typeStruct = &sDropbox{}
 		break
 	case gitlab:
-		typeStruct = sGitlab{}
+		typeStruct = &sGitlab{}
 		break
 	case line:
-		typeStruct = sLine{}
+		typeStruct = &sLine{}
 		break
 	case linkedin:
-		typeStruct = sLinkedin{}
+		typeStruct = &sLinkedin{}
 		break
 	case microsoft:
-		typeStruct = sMicrosoft{}
+		typeStruct = &sMicrosoft{}
 		break
 	case pinterest:
-		typeStruct = sPinterest{}
+		typeStruct = &sPinterest{}
 		break
 	case reddit:
-		typeStruct = sReddit{}
+		typeStruct = &sReddit{}
 		break
 	case shopify:
-		typeStruct = sShopify{}
+		typeStruct = &sShopify{}
 		break
 	case tiktok:
-		typeStruct = sTiktok{}
+		typeStruct = &sTiktok{}
 		break
 	default:
 		helpers.CheckNilErr(errors.New("platform not found"))
@@ -145,6 +145,7 @@ func (s *socialBase) Auth(r *http.Request) {
 		code = code + "," + r.Header.Get("code_verifier")
 	}
 	token := s.ICore.getToken(code)
+	log.Println(string(token.Data))
 	if !token.Status {
 		helpers.CheckNilErr(token.Error)
 		return

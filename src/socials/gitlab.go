@@ -15,6 +15,7 @@ import (
 var gitlab = "gitlab"
 
 type sGitlab struct {
+	http *service.SHttpRequest
 }
 
 var scopeGl []string
@@ -65,23 +66,26 @@ type profileGl struct {
 	ScimIdentities                 []any  `json:"scim_identities"`
 }
 
-func (s sGitlab) loadConfig() {
+func (s *sGitlab) loadConfig() {
 	coreConfig.Separator = " "
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"read_user",
 	}, scopeGl...))
 	urlAuth = fmt.Sprintf("%s/oauth/authorize", vars.EndPoint)
+	s.http = service.NewHttpRequest()
 }
 
-func (s sGitlab) getToken(code string) vars.ResReq {
+func (s *sGitlab) getToken(code string) vars.ResReq {
 	body, _ := buildPayloadToken(code, true)
-	return service.PostRequest(fmt.Sprintf("%s/oauth/token?%s", vars.EndPoint, body.Encode()), nil, nil)
+	s.http.Url = fmt.Sprintf("%s/oauth/token?%s", vars.EndPoint, body.Encode())
+	return s.http.PostRequest()
 }
 
-func (s sGitlab) profile(token string) repositories.Core {
+func (s *sGitlab) profile(token string) repositories.Core {
 	query := url.Values{}
 	query.Add("access_token", token)
-	result := service.GetRequest(fmt.Sprintf("%s/api/%s/user?%s", vars.EndPoint, vars.Version, query.Encode()), nil)
+	s.http.Url = fmt.Sprintf("%s/api/%s/user?%s", vars.EndPoint, vars.Version, query.Encode())
+	result := s.http.GetRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}

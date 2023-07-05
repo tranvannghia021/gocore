@@ -41,7 +41,7 @@ func (s *SBaseSql) GetConnection() *gorm.DB {
 }
 
 func (s *SBaseSql) GetALL() ResSql {
-	result := s.baseDB.Find(s.GetModel())
+	result := s.GetConnection().Find(s.GetModel())
 	if result.Error != nil {
 		return ResSql{
 			Status: false,

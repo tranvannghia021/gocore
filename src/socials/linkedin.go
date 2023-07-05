@@ -15,6 +15,7 @@ import (
 var linkedin = "linkedin"
 
 type sLinkedin struct {
+	http *service.SHttpRequest
 }
 
 var scopeLk []string
@@ -41,31 +42,33 @@ type profileLk struct {
 	ID string `json:"id"`
 }
 
-func (s sLinkedin) loadConfig() {
+func (s *sLinkedin) loadConfig() {
 	coreConfig.Separator = " "
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"r_liteprofile",
 		"r_emailaddress",
 	}, scopeLk...))
+	s.http = service.NewHttpRequest()
 	urlAuth = fmt.Sprintf("https://www.linkedin.com/oauth/%s/authorization", vars.Version)
 }
 
-func (s sLinkedin) getToken(code string) vars.ResReq {
+func (s *sLinkedin) getToken(code string) vars.ResReq {
 	body, _ := buildPayloadToken(code, true)
-	return service.PostFormDataRequest(fmt.Sprintf("https://www.linkedin.com/oauth/%s/accessToken?%s", vars.Version, body.Encode()), nil, nil)
+	s.http.FormData = body
+	s.http.Url = fmt.Sprintf("https://www.linkedin.com/oauth/%s/accessToken?%s", vars.Version, body.Encode())
+	return s.http.PostFormDataRequest()
 }
 
-func (s sLinkedin) profile(token string) repositories.Core {
+func (s *sLinkedin) profile(token string) repositories.Core {
 	param := url.Values{}
 	param.Add("projection", "(id,firstName,lastName,profilePicture(displayImage~:playableStreams))")
-	var headers = make(map[string]string)
-	headers["Authorization"] = "Bearer " + token
-	result := service.GetRequest(fmt.Sprintf("%s/%s/me?%s", vars.EndPoint, vars.Version, param.Encode()), headers)
+	s.http.Url = fmt.Sprintf("%s/%s/me?%s", vars.EndPoint, vars.Version, param.Encode())
+	result := s.http.SetAuth(token).GetRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}
 	}
-	resultEmail := getEmailLinkedin(token)
+	resultEmail := s.getEmailLinkedin(token)
 	if !resultEmail.Status {
 		helpers.CheckNilErr(resultEmail.Error)
 		return repositories.Core{}
@@ -96,13 +99,12 @@ type emailLk struct {
 	} `json:"elements"`
 }
 
-func getEmailLinkedin(token string) vars.ResReq {
+func (s *sLinkedin) getEmailLinkedin(token string) vars.ResReq {
 	query := url.Values{}
 	query.Add("q", "members")
 	query.Add("projection", "(elements*(handle~))")
-	var headers = make(map[string]string)
-	headers["Authorization"] = "Bearer " + token
-	return service.GetRequest(fmt.Sprintf("%s/%s/emailAddress?%s", vars.EndPoint, vars.Version, query.Encode()), headers)
+	s.http.Url = fmt.Sprintf("%s/%s/emailAddress?%s", vars.EndPoint, vars.Version, query.Encode())
+	return s.http.SetAuth(token).GetRequest()
 }
 
 func AddScopeLinkedin(scope []string) {

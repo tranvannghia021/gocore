@@ -13,6 +13,7 @@ import (
 )
 
 type sFacebook struct {
+	http *service.SHttpRequest
 }
 
 var facebook = "facebook"
@@ -35,7 +36,7 @@ type profileFB struct {
 	} `json:"picture"`
 }
 
-func (sFacebook) loadConfig() {
+func (s *sFacebook) loadConfig() {
 	coreConfig.UsePKCE = false
 	coreConfig.Separator = ","
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
@@ -56,12 +57,13 @@ func (sFacebook) loadConfig() {
 	}, fieldFb...))
 	urlAuth = fmt.Sprintf("https://www.facebook.com/%s/dialog/oauth", vars.Version)
 	parameters["display"] = "popup"
+	s.http = service.NewHttpRequest()
 }
 
-func (sFacebook) getToken(code string) vars.ResReq {
+func (s *sFacebook) getToken(code string) vars.ResReq {
 	data, _ := buildPayloadToken(code, true)
-	url := fmt.Sprintf("%s/%s/oauth/access_token?%s", vars.EndPoint, vars.Version, data.Encode())
-	return service.GetRequest(url, make(map[string]string))
+	s.http.Url = fmt.Sprintf("%s/%s/oauth/access_token?%s", vars.EndPoint, vars.Version, data.Encode())
+	return s.http.GetRequest()
 }
 
 func AddScopeFaceBook(scope []string) {
@@ -71,12 +73,13 @@ func AddScopeFaceBook(scope []string) {
 func AddFieldFacebook(fields []string) {
 	fieldFb = fields
 }
-func (sFacebook) profile(token string) repositories.Core {
+func (s *sFacebook) profile(token string) repositories.Core {
 	query := url.Values{}
 	query.Add("access_token", token)
-	results := service.GetRequest(fmt.Sprintf("%s/%s/me?%s&fields=%s",
+	s.http.Url = fmt.Sprintf("%s/%s/me?%s&fields=%s",
 		vars.EndPoint,
-		vars.Version, query.Encode(), strings.Join(coreConfig.Fields, ",")), nil)
+		vars.Version, query.Encode(), strings.Join(coreConfig.Fields, ","))
+	results := s.http.GetRequest()
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
 		return repositories.Core{}

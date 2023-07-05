@@ -7,6 +7,7 @@ import (
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/service"
 	"github.com/tranvannghia021/gocore/vars"
+	"strings"
 	"time"
 )
 
@@ -14,6 +15,7 @@ var google = "google"
 var scopeGg []string
 
 type sGoogle struct {
+	http *service.SHttpRequest
 }
 type profileGg struct {
 	ID            string `json:"id"`
@@ -25,7 +27,7 @@ type profileGg struct {
 	Locale        string `json:"locale"`
 }
 
-func (sGoogle) loadConfig() {
+func (s *sGoogle) loadConfig() {
 	coreConfig.UsePKCE = false
 	coreConfig.Separator = " "
 	urlAuth = fmt.Sprintf("https://accounts.google.com/o/oauth2/%s/auth", vars.Version)
@@ -39,24 +41,26 @@ func (sGoogle) loadConfig() {
 		"https://www.googleapis.com/auth/user.phonenumbers.read",
 		"https://www.googleapis.com/auth/userinfo.profile",
 	}, scopeGg...))
+	s.http = service.NewHttpRequest()
 }
 
 func AddScopeGoogle(scope []string) {
 	scopeGg = scope
 }
 
-func (g sGoogle) getToken(code string) vars.ResReq {
+func (g *sGoogle) getToken(code string) vars.ResReq {
 	_, data := buildPayloadToken(code, false)
-	url := fmt.Sprintf("https://oauth2.%s/token", vars.EndPoint)
-	var headers = make(map[string]string)
-	headers["Content-Type"] = "application/json"
-	return service.PostRequest(url, headers, data)
+	g.http.Url = fmt.Sprintf("https://oauth2.%s/token", vars.EndPoint)
+	byte, _ := json.Marshal(data)
+	g.http.Body = strings.NewReader(string(byte))
+	return g.http.PostRequest()
 }
 
-func (g sGoogle) profile(token string) repositories.Core {
-	results := service.GetRequest(fmt.Sprintf("https://www.%s/oauth2/%s/userinfo?alt=json&access_token=%s",
+func (g *sGoogle) profile(token string) repositories.Core {
+	g.http.Url = fmt.Sprintf("https://www.%s/oauth2/%s/userinfo?alt=json&access_token=%s",
 		vars.EndPoint,
-		vars.Version, token), map[string]string{})
+		vars.Version, token)
+	results := g.http.GetRequest()
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
 		return repositories.Core{}

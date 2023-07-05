@@ -7,7 +7,7 @@ import (
 )
 
 type Imailer interface {
-	Create(sMailer *SMailer) *mail.Email
+	Create() *SMailer
 	Send() error
 }
 

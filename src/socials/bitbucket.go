@@ -14,6 +14,7 @@ import (
 var bitbucket = "bitbucket"
 
 type sBitbucket struct {
+	http *service.SHttpRequest
 }
 
 var scopeBb []string
@@ -68,31 +69,33 @@ type emailBb struct {
 	Page    int `json:"page"`
 }
 
-func (s sBitbucket) loadConfig() {
+func (s *sBitbucket) loadConfig() {
 	coreConfig.Separator = ","
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"email",
 	}, scopeBb...))
 	urlAuth = "https://bitbucket.org/site/oauth2/authorize"
+	s.http = service.NewHttpRequest()
 }
 
-func (s sBitbucket) getToken(code string) vars.ResReq {
-	url := "https://bitbucket.org/site/oauth2/access_token"
-
-	body, _ := buildPayloadToken(code, true)
-	return service.PostFormDataRequest(url, headerAuthBasic(), body)
+func (s *sBitbucket) getToken(code string) vars.ResReq {
+	s.http.FormData, _ = buildPayloadToken(code, true)
+	s.http.Url = "https://bitbucket.org/site/oauth2/access_token"
+	s.http.Headers = headerAuthBasic()
+	return s.http.PostFormDataRequest()
 }
 
-func (s sBitbucket) profile(token string) repositories.Core {
+func (s *sBitbucket) profile(token string) repositories.Core {
 	query := url.Values{}
 	query.Add("access_token", token)
 	param := query.Encode()
-	result := service.GetRequest(fmt.Sprintf("%s/%s/user?%s", vars.EndPoint, vars.Version, param), nil)
+	s.http.Url = fmt.Sprintf("%s/%s/user?%s", vars.EndPoint, vars.Version, param)
+	result := s.http.GetRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}
 	}
-	resultEmail := getEmail(param)
+	resultEmail := s.getEmail(param)
 	if !resultEmail.Status {
 		helpers.CheckNilErr(resultEmail.Error)
 		return repositories.Core{}
@@ -118,6 +121,7 @@ func (s sBitbucket) profile(token string) repositories.Core {
 func AddScopeBitbucket(scope []string) {
 	scopeBb = scope
 }
-func getEmail(param string) vars.ResReq {
-	return service.GetRequest(fmt.Sprintf("%s/%s/user/emails?%s", vars.EndPoint, vars.Version, param), nil)
+func (s *sBitbucket) getEmail(param string) vars.ResReq {
+	s.http.Url = fmt.Sprintf("%s/%s/user/emails?%s", vars.EndPoint, vars.Version, param)
+	return s.http.GetRequest()
 }

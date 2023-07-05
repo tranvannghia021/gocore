@@ -7,7 +7,6 @@ import (
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/service"
 	"github.com/tranvannghia021/gocore/vars"
-	"log"
 	"net/url"
 	"time"
 )
@@ -15,6 +14,7 @@ import (
 var line = "line"
 
 type sLine struct {
+	http *service.SHttpRequest
 }
 
 var scopeL []string
@@ -25,7 +25,7 @@ type profileL struct {
 	Name string `json:"name"`
 }
 
-func (s sLine) loadConfig() {
+func (s *sLine) loadConfig() {
 	coreConfig.Separator = " "
 	coreConfig.UsePKCE = true
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
@@ -33,23 +33,23 @@ func (s sLine) loadConfig() {
 		"openid",
 	}, scopeL...))
 	urlAuth = "https://access.line.me/oauth2/v2.1/authorize"
+	s.http = service.NewHttpRequest()
 }
 
-func (s sLine) getToken(code string) vars.ResReq {
-	body, _ := buildPayloadToken(code, true)
-	return service.PostFormDataRequest(fmt.Sprintf("%s/oauth2/%s/token", vars.EndPoint, vars.Version), nil, body)
+func (s *sLine) getToken(code string) vars.ResReq {
+	s.http.FormData, _ = buildPayloadToken(code, true)
+	s.http.Url = fmt.Sprintf("%s/oauth2/%s/token", vars.EndPoint, vars.Version)
+	return s.http.PostFormDataRequest()
 }
 
-func (s sLine) profile(token string) repositories.Core {
-	verify := verifyToken(idToken)
+func (s *sLine) profile(token string) repositories.Core {
+	verify := s.verifyToken(idToken)
 	if !verify.Status {
 		helpers.CheckNilErr(verify.Error)
 		return repositories.Core{}
 	}
-	log.Println(string(verify.Data))
-	var headers = make(map[string]string)
-	headers["Authorization"] = "Bearer " + token
-	result := service.GetRequest(fmt.Sprintf("%s/oauth2/%s/userinfo", vars.EndPoint, vars.Version), headers)
+	s.http.Url = fmt.Sprintf("%s/oauth2/%s/userinfo", vars.EndPoint, vars.Version)
+	result := s.http.SetAuth(token).GetRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}
@@ -83,11 +83,13 @@ type verifyTokenResL struct {
 	Picture string   `json:"picture"`
 }
 
-func verifyToken(idToken string) vars.ResReq {
+func (g sLine) verifyToken(idToken string) vars.ResReq {
 	body := url.Values{}
 	body.Add("id_token", idToken)
 	body.Add("client_id", vars.ClientId)
-	return service.PostFormDataRequest(fmt.Sprintf("%s/oauth2/%s/verify", vars.EndPoint, vars.Version), nil, body)
+	g.http.Url = fmt.Sprintf("%s/oauth2/%s/verify", vars.EndPoint, vars.Version)
+	g.http.FormData = body
+	return g.http.PostFormDataRequest()
 }
 
 func AddScopeLine(scope []string) {

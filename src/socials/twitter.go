@@ -15,6 +15,7 @@ import (
 var twitter = "twitter"
 
 type sTwitter struct {
+	http *service.SHttpRequest
 }
 
 var (
@@ -31,7 +32,7 @@ type profileTt struct {
 	} `json:"data"`
 }
 
-func (s sTwitter) loadConfig() {
+func (s *sTwitter) loadConfig() {
 	coreConfig.Separator = " "
 	coreConfig.UsePKCE = true
 	urlAuth = "https://twitter.com/i/oauth2/authorize"
@@ -46,19 +47,20 @@ func (s sTwitter) loadConfig() {
 		"url",
 		"username",
 	}, fieldsTt...))
+	s.http = service.NewHttpRequest()
 }
 
-func (s sTwitter) getToken(code string) vars.ResReq {
-	body, _ := buildPayloadToken(code, true)
-	return service.PostFormDataRequest(fmt.Sprintf("%s/%s/oauth2/token", vars.EndPoint, vars.Version), nil, body)
+func (s *sTwitter) getToken(code string) vars.ResReq {
+	s.http.FormData, _ = buildPayloadToken(code, true)
+	s.http.Url = fmt.Sprintf("%s/%s/oauth2/token", vars.EndPoint, vars.Version)
+	return s.http.PostFormDataRequest()
 }
 
-func (s sTwitter) profile(token string) repositories.Core {
-	var headers = make(map[string]string)
-	headers["Authorization"] = "Bearer " + token
+func (s *sTwitter) profile(token string) repositories.Core {
 	param := url.Values{}
 	param.Add("user.fields", strings.Join(coreConfig.Fields, ","))
-	result := service.GetRequest(fmt.Sprintf("%s/%s/users/me?%s", vars.EndPoint, vars.Version, param.Encode()), headers)
+	s.http.Url = fmt.Sprintf("%s/%s/users/me?%s", vars.EndPoint, vars.Version, param.Encode())
+	result := s.http.SetAuth(token).GetRequest()
 	if !result.Status {
 		helpers.CheckNilErr(result.Error)
 		return repositories.Core{}

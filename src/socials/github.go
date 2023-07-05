@@ -14,6 +14,7 @@ import (
 var github = "github"
 
 type sGithub struct {
+	http *service.SHttpRequest
 }
 
 var scopeGh []string
@@ -59,26 +60,27 @@ type profileGh struct {
 	} `json:"plan"`
 }
 
-func (s sGithub) loadConfig() {
+func (s *sGithub) loadConfig() {
 	coreConfig.Separator = ","
 	urlAuth = "https://github.com/login/oauth/authorize"
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"user",
 	}, scopeGh...))
+	s.http = service.NewHttpRequest()
 }
 
-func (s sGithub) getToken(code string) vars.ResReq {
+func (s *sGithub) getToken(code string) vars.ResReq {
 	data, _ := buildPayloadToken(code, true)
-	url := fmt.Sprintf("https://github.com/login/oauth/access_token?%s", data)
+	s.http.Url = fmt.Sprintf("https://github.com/login/oauth/access_token?%s", data.Encode())
 	var headers = make(map[string]string)
 	headers["Accept"] = "application/json"
-	return service.PostRequest(url, headers, nil)
+	s.http.Headers = headers
+	return s.http.PostRequest()
 }
 
-func (s sGithub) profile(token string) repositories.Core {
-	var headers = make(map[string]string)
-	headers["Authorization"] = "Bearer " + token
-	results := service.GetRequest(fmt.Sprintf("%s/user", vars.EndPoint), headers)
+func (s *sGithub) profile(token string) repositories.Core {
+	s.http.Url = fmt.Sprintf("%s/user", vars.EndPoint)
+	results := s.http.SetAuth(token).GetRequest()
 	if !results.Status {
 		helpers.CheckNilErr(results.Error)
 		return repositories.Core{}
