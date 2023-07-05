@@ -8,6 +8,7 @@ import (
 	"github.com/gorilla/mux"
 	"github.com/tranvannghia021/gocore/config"
 	"github.com/tranvannghia021/gocore/helpers"
+	"github.com/tranvannghia021/gocore/singletons"
 	"github.com/tranvannghia021/gocore/src/mail"
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/repositories/sql"
@@ -44,11 +45,16 @@ func NewHandler() iHandler {
 }
 func (shandler) GenerateUrl(w http.ResponseWriter, r *http.Request) {
 	params := mux.Vars(r)
-	vars.Payload.Ip = helpers.Md5(r.RemoteAddr)
-	vars.Payload.Platform = params["platform"]
+	instance := singletons.InstancePayload()
+	instance.Ip = helpers.Md5(r.RemoteAddr)
+	instance.Platform = params["platform"]
 	var s sShopify
 	_ = json.NewDecoder(r.Body).Decode(&s)
-	vars.Payload.Domain = s.Domain
+	instance.Domain = s.Domain
+	if instance.Platform == "shopify" && instance.Domain == "" {
+		response.Response(nil, w, true, errors.New("domain is required"))
+		return
+	}
 	channel, _ := os.LookupEnv("CHANNEL_NAME")
 	event, _ := os.LookupEnv("EVENT_NAME")
 	response.Response(&styleRpPusher{
@@ -58,17 +64,18 @@ func (shandler) GenerateUrl(w http.ResponseWriter, r *http.Request) {
 			Event   string `json:"event"`
 		}{
 			Channel: channel,
-			Event:   event + "_" + vars.Payload.Ip,
+			Event:   event + "_" + instance.Ip,
 		},
 	}, w, false, nil)
 }
 
 func (shandler) AuthHandle(w http.ResponseWriter, r *http.Request) {
-	vars.Payload.Platform = r.Header.Get("platform")
+	instance := singletons.InstancePayload()
+	instance.Platform = r.Header.Get("platform")
 	params := r.URL.Query()
-	vars.Payload.Domain = params.Get("shop")
+	instance.Domain = params.Get("shop")
 	if params.Get("error") != "" || params.Get("errors") != "" {
-		helpers.CheckNilErr(errors.New("Accept denied!"))
+		helpers.CheckNilErr(errors.New("accept denied"))
 		return
 	}
 	socials.New().Auth(r)
@@ -146,7 +153,7 @@ func (sManager) SignUp(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if body.Password != body.Confirm {
-		response.Response(nil, w, true, errors.New("Password does not match"))
+		response.Response(nil, w, true, errors.New("password does not match"))
 		return
 	}
 	var pathAvatar string
@@ -157,22 +164,27 @@ func (sManager) SignUp(w http.ResponseWriter, r *http.Request) {
 	}
 	uuidA := uuid.New()
 	core := repositories.Core{
-		ID:            uuidA,
-		InternalId:    uuidA.String(),
-		Platform:      inApp,
-		Email:         body.Email,
-		EmailVerifyAt: time.Time{},
-		Password:      helpers.HashPassword(body.Password),
-		FirstName:     body.FirstName,
-		LastName:      body.LastName,
-		Avatar:        pathAvatar,
-		Gender:        body.Gender,
-		Status:        false,
-		Phone:         body.Phone,
-		BirthDay:      body.BirthDay,
-		Address:       body.Address,
+		Platform: inApp,
+		Email:    body.Email,
 	}
 	var repo sql.Suser
+	repo.ModelBase = &core
+	record := repo.First()
+	if record.Errors == nil {
+		response.Response(nil, w, true, errors.New("account already exists"))
+		return
+	}
+	core.ID = uuidA
+	core.InternalId = uuidA.String()
+	core.Password = helpers.HashPassword(body.Password)
+	core.FirstName = body.FirstName
+	core.LastName = body.LastName
+	core.Avatar = pathAvatar
+	core.Gender = body.Gender
+	core.Status = false
+	core.Phone = body.Phone
+	core.BirthDay = body.BirthDay
+	core.Address = body.Address
 	repo.ModelBase = &core
 	result := repo.Create()
 	if !result.Status {
@@ -185,7 +197,7 @@ func (sManager) SignUp(w http.ResponseWriter, r *http.Request) {
 		Email:    core.Email,
 		CreateAt: time.Now().Add(10 * time.Minute),
 	}
-	signature := helpers.EncodeJWT(payload, false)
+	signature := helpers.EncodeJWT(&payload, false)
 	appurl, _ := os.LookupEnv("APP_URL")
 	go log.Println("MAIL", mail.RegisterMail(core.Email, appurl+"/api/verify/email?type=register&token="+signature))
 	helpers.FilterDataPrivate(&core)
@@ -194,29 +206,31 @@ func (sManager) SignUp(w http.ResponseWriter, r *http.Request) {
 func (sManager) Update(w http.ResponseWriter, r *http.Request) {
 	var core repositories.Core
 	_ = json.NewDecoder(r.Body).Decode(&core)
-	vars.User.Phone = core.Phone
-	vars.User.Address = core.Address
-	vars.User.FirstName = core.FirstName
-	vars.User.LastName = core.LastName
-	vars.User.Gender = core.Gender
-	vars.User.BirthDay = core.BirthDay
+	userInstance := singletons.InstanceUser()
+	userInstance.Phone = core.Phone
+	userInstance.Address = core.Address
+	userInstance.FirstName = core.FirstName
+	userInstance.LastName = core.LastName
+	userInstance.Gender = core.Gender
+	userInstance.BirthDay = core.BirthDay
 	if core.Avatar != "" {
-		vars.User.Avatar, _ = helpers.Base64ToImage(core.Avatar, "./avatar")
+		userInstance.Avatar, _ = helpers.Base64ToImage(core.Avatar, "./avatar")
 	}
 	sql := new(sql.Suser)
-	sql.ModelBase = vars.User
+	sql.ModelBase = userInstance
 	result := sql.Update()
 	response.Response(result.Data, w, !result.Status, result.Errors)
 }
 
 func (sManager) Me(w http.ResponseWriter, r *http.Request) {
-	helpers.FilterDataPrivate(vars.User)
-	response.Response(vars.User, w, false, nil)
+	user := singletons.InstanceUser()
+	helpers.FilterDataPrivate(user)
+	response.Response(user, w, false, nil)
 }
 func (sManager) Delete(w http.ResponseWriter, r *http.Request) {
 
 	sql := new(sql.Suser)
-	sql.ModelBase = vars.User
+	sql.ModelBase = singletons.InstanceUser()
 	record := sql.Delete()
 	if !record.Status {
 		response.Response(nil, w, true, record.Errors)
@@ -258,7 +272,7 @@ func (sManager) Resend(w http.ResponseWriter, r *http.Request) {
 			Email: core.Email,
 			ID:    core.ID,
 		}
-		signature := helpers.EncodeJWT(payload, false)
+		signature := helpers.EncodeJWT(&payload, false)
 		appurl, _ := os.LookupEnv("APP_URL")
 		log.Println("MAIL", mail.RegisterMail(core.Email, appurl+"/api/verify/email?type="+param.Get("type")+"&token="+signature))
 	}()
@@ -285,6 +299,7 @@ func (sManager) Verify(w http.ResponseWriter, r *http.Request) {
 	}
 	core.Status = true
 	core.IsDisconnect = false
+	core.EmailVerifyAt = time.Now()
 	userModel.Update()
 	http.Redirect(w, r, "/success", 302)
 }

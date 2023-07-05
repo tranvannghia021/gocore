@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/tranvannghia021/gocore/config"
 	"github.com/tranvannghia021/gocore/helpers"
+	"github.com/tranvannghia021/gocore/singletons"
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/repositories/sql"
 	"github.com/tranvannghia021/gocore/vars"
@@ -52,6 +53,7 @@ type socialBase struct {
 	Platform string
 	Builder  *sql.SCore
 	ICore    iCore
+	Payload  *vars.PayloadGenerate
 }
 
 func load(platform string) iCore {
@@ -113,28 +115,29 @@ func load(platform string) iCore {
 		typeStruct = sTiktok{}
 		break
 	default:
-		helpers.CheckNilErr(errors.New("Platform not found"))
+		helpers.CheckNilErr(errors.New("platform not found"))
 	}
 	return typeStruct
 }
 
 func New() social {
-	platform := vars.Payload.Platform
-	social := load(platform)
+	instances := singletons.InstancePayload()
+	social := load(instances.Platform)
 	social.loadConfig()
 	codeVerifier = getCodeVerifier()
 	return &socialBase{
-		Platform: strings.ToLower(platform),
+		Platform: strings.ToLower(instances.Platform),
 		Builder:  new(sql.SCore),
 		ICore:    social,
+		Payload:  instances,
 	}
 }
 
 func (s *socialBase) Generate() string {
 	if coreConfig.UsePKCE {
-		vars.Payload.CodeVerifier = codeVerifier
+		s.Payload.CodeVerifier = codeVerifier
 	}
-	return s.buildLinkAuth(helpers.EncodeJWT(vars.Payload, false))
+	return s.buildLinkAuth(helpers.EncodeJWT(s.Payload, false))
 }
 func (s *socialBase) Auth(r *http.Request) {
 	code := r.URL.Query().Get("code")

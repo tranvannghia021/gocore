@@ -25,9 +25,10 @@ type SBaseSql struct {
 }
 
 type ResSql struct {
-	Status bool        `json:"status,omitempty"`
-	Data   interface{} `json:"data,omitempty"`
-	Errors error       `json:"errors,omitempty"`
+	Status  bool        `json:"status,omitempty"`
+	Data    interface{} `json:"data,omitempty"`
+	Errors  error       `json:"errors,omitempty"`
+	IsEmpty bool        `json:"is_empty"`
 }
 
 func (s *SBaseSql) GetModel() interface{} {
@@ -113,9 +114,10 @@ func (s *SBaseSql) First() ResSql {
 		}
 	}
 	return ResSql{
-		Status: true,
-		Data:   s.GetModel(),
-		Errors: nil,
+		Status:  true,
+		Data:    s.GetModel(),
+		Errors:  nil,
+		IsEmpty: result.RowsAffected <= 0,
 	}
 }
 

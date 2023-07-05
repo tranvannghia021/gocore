@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"github.com/golang-jwt/jwt/v5"
+	"github.com/tranvannghia021/gocore/singletons"
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/response"
 	"github.com/tranvannghia021/gocore/vars"
@@ -69,7 +70,7 @@ func FilterDataPrivate(coreModel *repositories.Core) {
 	coreModel.ExpireToken = time.Time{}
 
 }
-func EncodeJWT(payload vars.PayloadGenerate, isRefresh bool) string {
+func EncodeJWT(payload *vars.PayloadGenerate, isRefresh bool) string {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	var keyByte []byte
@@ -117,8 +118,8 @@ func DecodeJWT(tokenString string, isRefresh bool) (vars.PayloadGenerate, bool) 
 		log.Fatal(err)
 	}
 	jsonString, _ := json.Marshal(claims)
-	_ = json.Unmarshal(jsonString, &vars.Payload)
-	return vars.Payload, isExpire(vars.Payload.CreateAt)
+	_ = json.Unmarshal(jsonString, singletons.InstancePayload())
+	return *singletons.InstancePayload(), isExpire(singletons.InstancePayload().CreateAt)
 }
 
 func getKeyJWT() []byte {
@@ -286,8 +287,8 @@ func BuildResPayloadJwt(core repositories.Core, isBuildRefresh bool) BuildResLog
 			ExpireRefresh time.Time `json:"expire_refresh,omitempty"`
 			Type          string    `json:"type"`
 		}{
-			AccessToken:   EncodeJWT(payload, false),
-			RefreshToken:  EncodeJWT(payloadRefresh, true),
+			AccessToken:   EncodeJWT(&payload, false),
+			RefreshToken:  EncodeJWT(&payloadRefresh, true),
 			ExpireToken:   payload.CreateAt,
 			ExpireRefresh: payloadRefresh.CreateAt,
 			Type:          "Bearer",

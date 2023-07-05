@@ -10,7 +10,7 @@ import (
 	"time"
 )
 
-var Payload = PayloadGenerate{}
+var Payload *PayloadGenerate
 var (
 	AppId        string
 	ClientId     string

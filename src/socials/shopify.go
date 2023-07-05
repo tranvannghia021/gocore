@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/tranvannghia021/gocore/helpers"
+	"github.com/tranvannghia021/gocore/singletons"
 	"github.com/tranvannghia021/gocore/src/repositories"
 	"github.com/tranvannghia021/gocore/src/service"
 	"github.com/tranvannghia021/gocore/vars"
@@ -87,17 +88,18 @@ func (s sShopify) loadConfig() {
 	coreConfig.Scopes = helpers.RemoveDuplicateStr(append([]string{
 		"unauthenticated_read_product_listings",
 	}, scopeSp...))
-	urlAuth = fmt.Sprintf("https://%s/admin/oauth/authorize", vars.Payload.Domain)
+	domain = singletons.InstancePayload().Domain
+	urlAuth = fmt.Sprintf("https://%s/admin/oauth/authorize", domain)
 
 }
 
 func (s sShopify) getToken(code string) vars.ResReq {
 	body, _ := buildPayloadToken(code, true)
-	return service.PostFormDataRequest(fmt.Sprintf("https://%s/admin/oauth/access_token", vars.Payload.Domain), nil, body)
+	return service.PostFormDataRequest(fmt.Sprintf("https://%s/admin/oauth/access_token", domain), nil, body)
 }
 
 func (s sShopify) profile(token string) repositories.Core {
-	s.setParameter(vars.Payload.Domain)
+	s.setParameter(domain)
 	var headers = make(map[string]string)
 	headers["X-Shopify-Access-Token"] = token
 	result := service.GetRequest(fmt.Sprintf("%s/shop.json", vars.EndPoint), headers)
