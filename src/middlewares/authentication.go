@@ -21,6 +21,7 @@ func Auth(next http.Handler) http.Handler {
 			data, expire := helpers.DecodeJWT(state, false)
 			if expire {
 				errors = append(errors, "Signature is invalid!")
+				goto handleError
 			}
 			r.Header.Set("platform", data.Platform)
 			r.Header.Set("code_verifier", data.CodeVerifier)
@@ -30,7 +31,7 @@ func Auth(next http.Handler) http.Handler {
 			r.Header.Set("id", data.ID.String())
 
 		}
-
+	handleError:
 		if len(errors) > 0 {
 			response.Response(nil, w, true, errors2.New(errors[0]))
 			return

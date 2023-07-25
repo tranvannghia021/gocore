@@ -19,7 +19,6 @@ import (
 	_ "image/jpeg"
 	"image/png"
 	"io"
-	"log"
 	"os"
 	"strconv"
 	"strings"
@@ -110,12 +109,12 @@ func DecodeJWT(tokenString string, isRefresh bool) (vars.PayloadGenerate, bool) 
 	} else {
 		keyByte = getKeyJWT()
 	}
-	token, err := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
+	token, _ := jwt.ParseWithClaims(tokenString, &jwt.MapClaims{}, func(token *jwt.Token) (interface{}, error) {
 		return keyByte, nil
 	})
 	claims, _ := token.Claims.(*jwt.MapClaims)
 	if !token.Valid {
-		log.Fatal(err)
+		return *singletons.InstancePayload(), true
 	}
 	jsonString, _ := json.Marshal(claims)
 	_ = json.Unmarshal(jsonString, singletons.InstancePayload())
