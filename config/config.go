@@ -61,11 +61,16 @@ func InitMail() {
 		log.Fatal(err)
 	}
 	vars.Mail = smtpClient
+	fmt.Println("-----------------Mail CORE ready ")
 
 }
 func init() {
-	godotenv.Load()
-	ConnectDB()
-	InitMail()
-	ConnectCache()
+	if godotenv.Load() == nil {
+		if isDb, _ := os.LookupEnv("DB_CONNECT"); isDb == "true" {
+			ConnectDB()
+			InitMail()
+		}
+		ConnectCache()
+	}
+
 }
