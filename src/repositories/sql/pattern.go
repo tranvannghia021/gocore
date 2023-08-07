@@ -17,6 +17,7 @@ type IBaseSql interface {
 	GetModel() interface{}
 	GetConnection() *gorm.DB
 	UpdateOrCreate() ResSql
+	SetConnection(db *gorm.DB) *SBaseSql
 }
 
 type SBaseSql struct {
@@ -36,10 +37,15 @@ func (s *SBaseSql) GetModel() interface{} {
 }
 
 func (s *SBaseSql) GetConnection() *gorm.DB {
-	s.baseDB = vars.Connection
+	if s.baseDB == nil {
+		s.baseDB = vars.Connection
+	}
 	return s.baseDB
 }
-
+func (s *SBaseSql) SetConnection(db *gorm.DB) *SBaseSql {
+	s.baseDB = db
+	return s
+}
 func (s *SBaseSql) GetALL() ResSql {
 	result := s.GetConnection().Find(s.GetModel())
 	if result.Error != nil {

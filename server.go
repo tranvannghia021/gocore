@@ -10,20 +10,24 @@ import (
 	"golang.org/x/exp/slices"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials"
+	"google.golang.org/grpc/credentials/insecure"
 	"log"
 	"net"
 	"net/http"
 )
 
 type CoreServerTcp struct {
-	Schema   string
-	Address  string
-	Port     string
-	Tag      string
-	KeyFile  string
-	CertFile string
-	lis      net.Listener
-	Server   *grpc.Server
+	Schema            string
+	Address           string
+	Port              string
+	Tag               string
+	KeyFile           string
+	CertFile          string
+	lis               net.Listener
+	Server            *grpc.Server
+	SSL               bool
+	Interceptor       []grpc.UnaryServerInterceptor
+	InterceptorStream []grpc.StreamServerInterceptor
 }
 
 func NewServerTcp(server *CoreServerTcp) *CoreServerTcp {
@@ -58,27 +62,36 @@ func (s *CoreServerTcp) handleErrorPort() {
 }
 func (s *CoreServerTcp) start() *CoreServerTcp {
 	log.Printf("[TCP] Server %s running... %s://%s:%s", s.Tag, s.Schema, s.Address, s.Port)
-	s.lis, _ = net.Listen("tcp", fmt.Sprintf("%s:%d", s.Address, s.Port))
-	if s.CertFile == "" {
-		s.CertFile = "../ssl/server.crt"
-	}
-	if s.KeyFile == "" {
-		s.KeyFile = "../ssl/server.key"
-	}
-	creds, sslErr := credentials.NewServerTLSFromFile(s.CertFile, s.KeyFile)
-	if sslErr != nil {
-		log.Fatalf("create creds ssl err %v\n", sslErr)
+	s.lis, _ = net.Listen("tcp", fmt.Sprintf("%s:%s", s.Address, s.Port))
+
+	s.Server = grpc.NewServer(
+		grpc.ChainUnaryInterceptor(s.Interceptor...),
+		grpc.ChainStreamInterceptor(s.InterceptorStream...),
+	)
+
+	if s.SSL {
+		if s.CertFile == "" {
+			s.CertFile = "./ssl/server.crt"
+		}
+		if s.KeyFile == "" {
+			s.KeyFile = "./ssl/server.key"
+		}
+		c, sslErr := credentials.NewServerTLSFromFile(s.CertFile, s.KeyFile)
+		if sslErr != nil {
+			log.Fatal(sslErr)
+		}
+		s.Server = grpc.NewServer(grpc.Creds(c),
+			grpc.ChainUnaryInterceptor(s.Interceptor...),
+			grpc.ChainStreamInterceptor(s.InterceptorStream...))
 	}
 
-	s.Server = grpc.NewServer(grpc.Creds(creds))
 	return s
 }
+
 func (s *CoreServerTcp) Run() {
-	err := s.Server.Serve(s.lis)
-	log.Println(err)
-	//if err := s.Server.Serve(s.lis); err != nil {
-	//	log.Fatal(err)
-	//}
+	if err := s.Server.Serve(s.lis); err != nil {
+		log.Fatal(err)
+	}
 }
 
 type ServerGateWay struct {
@@ -90,6 +103,7 @@ type ServerGateWay struct {
 	Opts      []grpc.DialOption
 	Ctx       context.Context
 	MuxRouter *mux.Router
+	SSl       bool
 }
 
 func NewServerGateWay(server *ServerGateWay) *ServerGateWay {
@@ -120,12 +134,17 @@ func (s *ServerGateWay) handleErrorPort() {
 }
 func (s *ServerGateWay) start() *ServerGateWay {
 	s.MuxServer = runtime.NewServeMux()
-	if s.CertFile == "" {
-		s.CertFile = "../grpc/ssl/server.crt"
-	}
-	creds, sslErr := credentials.NewClientTLSFromFile(s.CertFile, s.Address)
-	if sslErr != nil {
-		log.Fatalf("create client creds ssl err %v\n", sslErr)
+	var creds = insecure.NewCredentials()
+	if s.SSl {
+		if s.CertFile == "" {
+			s.CertFile = "../grpc/ssl/server.crt"
+		}
+		c, sslErr := credentials.NewClientTLSFromFile(s.CertFile, s.Address)
+		if sslErr != nil {
+			log.Fatalf("create client creds ssl err %v\n", sslErr)
+		}
+		creds = c
+
 	}
 	s.Opts = []grpc.DialOption{grpc.WithTransportCredentials(creds)}
 	r := mux.NewRouter()
@@ -137,7 +156,7 @@ func (s *ServerGateWay) Run() {
 	flag.Parse()
 	defer glog.Flush()
 	log.Printf("[HTTP] Server gateway running... %s://%s:%s", s.Schema, s.Address, s.Port)
-	if err := http.ListenAndServe(fmt.Sprintf(":%s", s.Port), s.MuxRouter); err != nil {
+	if err := http.ListenAndServe(fmt.Sprintf("%s:%s", s.Address, s.Port), s.MuxRouter); err != nil {
 		glog.Fatal(err)
 	}
 }

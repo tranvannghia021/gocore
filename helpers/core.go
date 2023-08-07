@@ -299,3 +299,14 @@ func BuildResPayloadJwt(core repositories.Core, isBuildRefresh bool) BuildResLog
 	}
 	return data
 }
+
+func HandleAddressEnv(key string) []string {
+	appUrl, _ := os.LookupEnv(key)
+	return strings.Split(strings.Trim(appUrl, "http://"), ":")
+}
+func TrimResponseToStringJsonEs(res string, key string) string {
+	if key == "" {
+		key = "[200 OK]"
+	}
+	return "[" + strings.Trim(res, key) + "]"
+}

@@ -169,9 +169,7 @@ func (s *socialBase) Auth(r *http.Request) {
 		return
 	}
 	helpers.FilterDataPrivate(&coreModel)
-	b, _ := json.Marshal(coreModel)
-	log.Println(string(b))
-	config.Pusher(string(b), r.Header.Get("ip"))
+	config.Pusher(helpers.BuildResPayloadJwt(coreModel, true), r.Header.Get("ip"))
 }
 func (s *socialBase) buildLinkAuth(state string) string {
 	queryData := url.Values{}

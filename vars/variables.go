@@ -1,6 +1,7 @@
 package vars
 
 import (
+	"github.com/elastic/go-elasticsearch/v7"
 	"github.com/go-redis/redis"
 	"github.com/google/uuid"
 	"github.com/tranvannghia021/gocore/src/repositories"
@@ -26,11 +27,13 @@ var Redis *redis.Client
 var Mail *mail.SMTPClient
 var User *repositories.Core
 var Wh http.ResponseWriter
+var ES *elasticsearch.Client
 
 type ResReq struct {
-	Status bool
-	Data   []byte
-	Error  error
+	Status     bool
+	Data       []byte
+	Error      error
+	HeadersRes map[string][]string
 }
 type ConfigCore struct {
 	Database struct {

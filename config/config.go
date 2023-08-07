@@ -64,13 +64,26 @@ func InitMail() {
 	fmt.Println("-----------------Mail CORE ready ")
 
 }
+
 func init() {
 	if godotenv.Load() == nil {
-		if isDb, _ := os.LookupEnv("DB_CONNECT"); isDb == "true" {
+		isDbString, _ := os.LookupEnv("DB_CORE_CONNECT")
+		isDb, _ := strconv.ParseBool(isDbString)
+		if isDb {
 			ConnectDB()
+		}
+		isMailString, _ := os.LookupEnv("MAIL_ENABLE")
+		isMail, _ := strconv.ParseBool(isMailString)
+
+		if isMail {
 			InitMail()
 		}
-		ConnectCache()
+		isCacheString, _ := os.LookupEnv("CACHE_ENABLE")
+		isCache, _ := strconv.ParseBool(isCacheString)
+		if isCache {
+			ConnectCache()
+		}
+
 	}
 
 }

@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-type iHttpRequest interface {
+type IHttpRequest interface {
 	HandleErrorReq(body []byte) vars.ResReq
 	GetRequest() vars.ResReq
 	PostRequest() vars.ResReq
@@ -19,15 +19,19 @@ type iHttpRequest interface {
 	SetAuth(token string) *SHttpRequest
 }
 type SHttpRequest struct {
-	Url      string            `json:"url,omitempty"`
-	Headers  map[string]string `json:"headers,omitempty"`
-	Body     io.Reader         `json:"body,omitempty"`
-	FormData url.Values        `json:"form_data,omitempty"`
-	Err      error             `json:"err,omitempty"`
+	Url             string            `json:"url,omitempty"`
+	Headers         map[string]string `json:"headers,omitempty"`
+	Body            io.Reader         `json:"body,omitempty"`
+	FormData        url.Values        `json:"form_data,omitempty"`
+	Err             error             `json:"err,omitempty"`
+	HeadersResponse map[string][]string
 }
 
 func NewHttpRequest() *SHttpRequest {
-	return &SHttpRequest{}
+	return &SHttpRequest{
+		HeadersResponse: make(map[string][]string),
+	}
+
 }
 
 func (s *SHttpRequest) SetAuth(token string) *SHttpRequest {
@@ -39,17 +43,22 @@ func (s *SHttpRequest) SetAuth(token string) *SHttpRequest {
 }
 func (s *SHttpRequest) HandleErrorReq(body []byte) vars.ResReq {
 	if s.Err != nil {
+
 		return vars.ResReq{
 			Status: false,
 			Data:   nil,
 			Error:  s.Err,
 		}
 	}
-	return vars.ResReq{
-		Status: true,
-		Data:   body,
-		Error:  nil,
+
+	res := vars.ResReq{
+		Status:     true,
+		Data:       body,
+		Error:      nil,
+		HeadersRes: make(map[string][]string),
 	}
+	res.HeadersRes = s.HeadersResponse
+	return res
 }
 func (s *SHttpRequest) GetRequest() vars.ResReq {
 	req, err := http.NewRequest("GET", s.Url, nil)
@@ -63,6 +72,10 @@ func (s *SHttpRequest) GetRequest() vars.ResReq {
 	defer res.Body.Close()
 	body, err := ioutil.ReadAll(res.Body)
 	s.Err = err
+
+	for key, value := range res.Header {
+		s.HeadersResponse[key] = value
+	}
 	return s.HandleErrorReq(body)
 }
 

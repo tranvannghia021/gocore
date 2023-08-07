@@ -18,6 +18,7 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 )
 
@@ -149,7 +150,8 @@ func (sManager) SignUp(w http.ResponseWriter, r *http.Request) {
 	_ = json.NewDecoder(r.Body).Decode(&body)
 	validate := validator.New()
 	if err := validate.Struct(body); err != nil {
-		response.Response(nil, w, true, err)
+		errorsParse := strings.Split(err.Error(), "\n")
+		response.Response(nil, w, true, errors.New(errorsParse[0]))
 		return
 	}
 	if body.Password != body.Confirm {
